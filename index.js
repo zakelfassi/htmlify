@@ -495,7 +495,8 @@ async function writeRichHtmlArtifact({ title, htmlText, sourceId }) {
   const iso = now.toISOString().replace(/[:.]/g, '-');
   const fileName = `${iso}-${slugify(title)}-llm-enhanced.html`;
   const filePath = path.join(exportRoot, fileName);
-  await fs.writeFile(filePath, injectAnnotationLayer(html, { sourceId, title }), 'utf8');
+  const annotatedHtml = addCommentableAttributes(html);
+  await fs.writeFile(filePath, injectAnnotationLayer(annotatedHtml, { sourceId, title }), 'utf8');
   return filePath;
 }
 
@@ -534,7 +535,7 @@ function validateRichHtmlDocument(htmlText) {
 
 function addCommentableAttributes(html) {
   let index = 0;
-  return String(html || '').replace(/<(p|h[2-6]|li|pre|table|aside)\b(?![^>]*\bdata-commentable=)([^>]*)>/gi, (match, tag, attrs) => {
+  return String(html || '').replace(/<(p|h[1-6]|li|pre|table|aside|blockquote)\b(?![^>]*\bdata-commentable=)([^>]*)>/gi, (match, tag, attrs) => {
     index += 1;
     return `<${tag}${attrs} data-commentable="true" data-block-id="b-${index}">`;
   });
@@ -905,7 +906,8 @@ module.exports = function htmlLongAnswerExtension(pi) {
 
   async function rememberEligibleSource(source) {
     state.lastEligible = source;
-    await appendCustomEntry(SOURCE_ENTRY_TYPE, source);
+    const { text: _text, ...persistedSource } = source;
+    await appendCustomEntry(SOURCE_ENTRY_TYPE, persistedSource);
   }
 
   async function rememberExport(meta) {
@@ -1270,7 +1272,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
   }
 
   async function readCommentBundle(args) {
-    const raw = parseArgs(args).join(' ').trim();
+    const raw = typeof args === 'string' ? args.trim() : parseArgs(args).join(' ').trim();
     if (!raw) throw new Error('Pass a comments JSON file path or pasted JSON after /html-comments.');
     if (/^\{[\s\S]*\}$/.test(raw)) return JSON.parse(raw);
     const filePath = path.resolve(raw);

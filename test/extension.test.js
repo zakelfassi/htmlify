@@ -106,7 +106,11 @@ test('extension registers commands/events and handles long assistant messages', 
     ui: { notify: (message) => notifications.push(message) },
   });
 
-  assert.equal(entries.some((entry) => entry.type === 'html-long-answer-source'), true);
+  const sourceEntry = entries.find((entry) => entry.type === 'html-long-answer-source');
+  assert.ok(sourceEntry);
+  assert.equal(typeof sourceEntry.data.id, 'string');
+  assert.equal(sourceEntry.data.text, undefined);
+  assert.equal(sourceEntry.data.stats.characters, longText.trim().length);
   assert.equal(notifications.some((message) => message.includes('Long answer captured for HTML export')), false);
 });
 
@@ -200,7 +204,7 @@ test('rich export writes one standalone document instead of nesting it in the lo
     assert.equal((html.match(/<body\b/gi) || []).length, 1);
     assert.doesNotMatch(html, /<article class="content">[\s\S]*<!DOCTYPE html/i);
     assert.doesNotMatch(html, /<div class="eyebrow">Pi HTML export<\/div>/);
-    assert.match(html, /<h1>Designed Export<\/h1>/);
+    assert.match(html, /<h1 data-commentable="true" data-block-id="b-1">Designed Export<\/h1>/);
   });
 });
 
@@ -217,6 +221,7 @@ test('rich export injects trusted annotation layer after validation', async () =
     assert.match(html, /html-long-answer trusted annotation layer/);
     assert.match(html, /sourceId: "abc123"/);
     assert.match(html, /id="hla-download-json"/);
+    assert.match(html, /<p data-commentable="true" data-block-id="b-2">Safe body\.<\/p>/);
     assert.equal((html.match(/<script/gi) || []).length, 1);
   });
 });
@@ -309,4 +314,36 @@ test('comment bundles validate and produce deterministic agent prompt', () => {
   assert.match(prompt, /> selected claim/);
   assert.match(prompt, /Please tighten this\./);
   assert.throws(() => internals.validateCommentBundle({ version: 1, sourceId: 'other', comments: [] }, 'source-a'), /does not match/);
+});
+
+test('/html-comments accepts pasted JSON without collapsing comment text', async () => {
+  const events = new Map();
+  const sentMessages = [];
+  const notifications = [];
+  extension({
+    on: (eventName, handler) => events.set(eventName, handler),
+    sendUserMessage: async (message) => sentMessages.push(message),
+    appendEntry: async () => {},
+  });
+
+  const bundle = {
+    version: 1,
+    sourceId: 'source-a',
+    title: 'Reviewed Export',
+    comments: [{
+      selectedText: 'selected claim',
+      prefix: 'before',
+      suffix: 'after',
+      comment: 'Keep  two   spaces\nand this newline.',
+    }],
+  };
+
+  const result = await events.get('input')({ text: `/html-comments ${JSON.stringify(bundle, null, 2)}` }, {
+    ui: { notify: (message) => notifications.push(message) },
+  });
+
+  assert.deepEqual(result, { handled: true, action: 'handled' });
+  assert.equal(sentMessages.length, 1);
+  assert.match(sentMessages[0], /Keep  two   spaces\nand this newline\./);
+  assert.equal(notifications.some((message) => message.includes('Queued 1 HTML comment')), true);
 });
