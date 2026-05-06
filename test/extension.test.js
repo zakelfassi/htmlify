@@ -86,6 +86,7 @@ test('extension registers commands/events and handles long assistant messages', 
   assert.equal(typeof events.get('input'), 'function');
   assert.equal(typeof commands.get('html-last').handler, 'function');
   assert.equal(typeof commands.get('html-last-version').handler, 'function');
+  assert.equal(typeof commands.get('html-comments').handler, 'function');
 
   const inputResult = await events.get('input')({ text: '/html-last' }, {
     ui: { notify: (message) => notifications.push(message) },
@@ -173,12 +174,15 @@ test('local export preserves shell and representative markdown-ish rendering', a
 
     assert.match(html, /<div class="eyebrow">Pi HTML export<\/div>/);
     assert.match(html, /<strong>Mode<\/strong><br \/>local/);
-    assert.match(html, /<h2>Local Export Title<\/h2>/);
     assert.match(html, /href="https:\/\/example\.com"/);
+    assert.match(html, /<h2 data-commentable="true" data-block-id="b-1">Local Export Title<\/h2>/);
     assert.match(html, /<code>inlineCode<\/code>/);
-    assert.match(html, /<ul><li>first item<\/li><li>second item<\/li><\/ul>/);
-    assert.match(html, /<table>/);
-    assert.doesNotMatch(html, /<script/i);
+    assert.match(html, /<ul><li data-commentable="true" data-block-id="b-3">first item<\/li><li data-commentable="true" data-block-id="b-4">second item<\/li><\/ul>/);
+    assert.match(html, /<table data-commentable="true" data-block-id="b-5">/);
+    assert.equal((html.match(/<script/gi) || []).length, 1);
+    assert.match(html, /html-long-answer trusted annotation layer/);
+    assert.match(html, /data-commentable="true" data-block-id="b-1"/);
+    assert.match(html, /id="hla-add-comment"/);
   });
 });
 
@@ -197,6 +201,23 @@ test('rich export writes one standalone document instead of nesting it in the lo
     assert.doesNotMatch(html, /<article class="content">[\s\S]*<!DOCTYPE html/i);
     assert.doesNotMatch(html, /<div class="eyebrow">Pi HTML export<\/div>/);
     assert.match(html, /<h1>Designed Export<\/h1>/);
+  });
+});
+
+test('rich export injects trusted annotation layer after validation', async () => {
+  await withTempExportRoot(async () => {
+    const richHtml = richDocument('<main><h1>Designed Export</h1><p>Safe body.</p></main>');
+    const filePath = await internals.writeRichHtmlArtifact({
+      title: 'Designed Export',
+      htmlText: richHtml,
+      sourceId: 'abc123',
+    });
+    const html = await fs.readFile(filePath, 'utf8');
+
+    assert.match(html, /html-long-answer trusted annotation layer/);
+    assert.match(html, /sourceId: "abc123"/);
+    assert.match(html, /id="hla-download-json"/);
+    assert.equal((html.match(/<script/gi) || []).length, 1);
   });
 });
 
@@ -260,6 +281,32 @@ test('rich extraction and command mode parsing are deterministic', () => {
   assert.deepEqual(internals.parseHtmlLastInput('/html-last quick'), { command: 'export', args: 'quick' });
   assert.deepEqual(internals.parseHtmlLastInput(' /html-last-version '), { command: 'version', args: '' });
   assert.equal(internals.parseHtmlLastInput('/html-lastly'), null);
+  assert.deepEqual(internals.parseHtmlLastInput('/html-comments comments.json'), { command: 'comments', args: 'comments.json' });
   assert.equal(internals.resolveForcedExportMode('designed'), 'rich-pi');
   assert.equal(internals.resolveForcedExportMode(''), null);
+});
+
+test('comment bundles validate and produce deterministic agent prompt', () => {
+  const bundle = internals.validateCommentBundle({
+    version: 1,
+    sourceId: 'source-a',
+    title: 'Reviewed Export',
+    exportUrl: 'file:///tmp/export.html',
+    comments: [{
+      id: 'c1',
+      blockId: 'b-2',
+      selectedText: 'selected claim',
+      prefix: 'before',
+      suffix: 'after',
+      comment: 'Please tighten this.',
+      createdAt: '2026-05-05T00:00:00.000Z',
+    }],
+  }, 'source-a');
+
+  const prompt = internals.buildCommentsPrompt(bundle);
+  assert.match(prompt, /I reviewed the HTML export/);
+  assert.match(prompt, /Source ID: source-a/);
+  assert.match(prompt, /> selected claim/);
+  assert.match(prompt, /Please tighten this\./);
+  assert.throws(() => internals.validateCommentBundle({ version: 1, sourceId: 'other', comments: [] }, 'source-a'), /does not match/);
 });

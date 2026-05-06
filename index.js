@@ -12,6 +12,8 @@ const DEFAULT_EXPORT_ROOT = path.join(os.tmpdir(), 'pi-html-exports');
 const PREF_ENTRY_TYPE = 'html-long-answer-pref';
 const SOURCE_ENTRY_TYPE = 'html-long-answer-source';
 const EXPORT_ENTRY_TYPE = 'html-long-answer-export';
+const COMMENT_ENTRY_TYPE = 'html-long-answer-comments';
+const COMMENT_BUNDLE_VERSION = 1;
 const LONG_ANSWER_DEFAULTS = {
   minChars: 1800,
   minLines: 24,
@@ -27,6 +29,7 @@ const EXTERNAL_ASSET_ATTR = /(?:\s(?:src|poster)\s*=\s*(['\"]?)\s*(?:https?:)?\/
 const EXTERNAL_CSS_URL = /(?:url\(\s*(['\"]?)\s*(?:https?:)?\/\/|@import\s+(?:url\(\s*)?(['\"]?)\s*(?:https?:)?\/\/)/i;
 const OPEN_FAILURE_WINDOW_MS = 1000;
 
+const TRUSTED_ANNOTATION_MARKER = '<!-- html-long-answer trusted annotation layer -->';
 
 function sha(input) {
   return crypto.createHash('sha1').update(String(input || '')).digest('hex');
@@ -469,19 +472,22 @@ async function writeHtmlArtifact({ title, bodyHtml, sourceText, mode }) {
   const iso = now.toISOString().replace(/[:.]/g, '-');
   const fileName = `${iso}-${slugify(title)}-${mode}.html`;
   const filePath = path.join(exportRoot, fileName);
-  const html = buildLocalHtmlDocument(title, bodyHtml, {
+  const sourceId = sha(sourceText);
+  const annotatedBodyHtml = addCommentableAttributes(bodyHtml);
+  const html = buildLocalHtmlDocument(title, annotatedBodyHtml, {
     exportedAt: now.toISOString(),
     words: wordCount(sourceText),
     characters: String(sourceText || '').length,
     mode,
     excerpt: deriveExcerpt(sourceText),
     outlineHtml: buildOutlineHtml(sourceText),
+    sourceId,
   });
-  await fs.writeFile(filePath, html, 'utf8');
+  await fs.writeFile(filePath, injectAnnotationLayer(html, { sourceId, title }), 'utf8');
   return filePath;
 }
 
-async function writeRichHtmlArtifact({ title, htmlText }) {
+async function writeRichHtmlArtifact({ title, htmlText, sourceId }) {
   const html = validateRichHtmlDocument(htmlText);
   const exportRoot = getExportRoot();
   await ensureDir(exportRoot);
@@ -489,7 +495,7 @@ async function writeRichHtmlArtifact({ title, htmlText }) {
   const iso = now.toISOString().replace(/[:.]/g, '-');
   const fileName = `${iso}-${slugify(title)}-llm-enhanced.html`;
   const filePath = path.join(exportRoot, fileName);
-  await fs.writeFile(filePath, html, 'utf8');
+  await fs.writeFile(filePath, injectAnnotationLayer(html, { sourceId, title }), 'utf8');
   return filePath;
 }
 
@@ -526,6 +532,208 @@ function validateRichHtmlDocument(htmlText) {
   return /^<!DOCTYPE html/i.test(html) ? html : `<!DOCTYPE html>\n${html}`;
 }
 
+function addCommentableAttributes(html) {
+  let index = 0;
+  return String(html || '').replace(/<(p|h[2-6]|li|pre|table|aside)\b(?![^>]*\bdata-commentable=)([^>]*)>/gi, (match, tag, attrs) => {
+    index += 1;
+    return `<${tag}${attrs} data-commentable="true" data-block-id="b-${index}">`;
+  });
+}
+
+function buildAnnotationLayer(meta) {
+  const sourceId = String(meta && meta.sourceId ? meta.sourceId : '');
+  const title = String(meta && meta.title ? meta.title : 'HTML Export');
+  return `${TRUSTED_ANNOTATION_MARKER}
+<style>
+  .hla-comment-bar { position: fixed; right: 18px; bottom: 18px; z-index: 99999; display: flex; gap: 8px; flex-wrap: wrap; max-width: min(420px, calc(100vw - 36px)); font: 13px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .hla-comment-bar button, .hla-comment-panel button { border: 1px solid #b9c4d6; background: #fff; color: #162033; border-radius: 999px; padding: 8px 11px; cursor: pointer; box-shadow: 0 8px 22px -18px rgba(15,23,42,.55); }
+  .hla-comment-bar button:hover, .hla-comment-panel button:hover { background: #f4f7fb; }
+  .hla-comment-panel { position: fixed; top: 16px; right: 16px; bottom: 72px; z-index: 99998; width: min(390px, calc(100vw - 32px)); overflow: auto; background: #fff; color: #162033; border: 1px solid #cfd7e6; border-radius: 18px; box-shadow: 0 24px 70px -34px rgba(15,23,42,.55); padding: 16px; font: 13px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .hla-comment-panel[hidden] { display: none; }
+  .hla-comment-panel h2 { margin: 0 0 10px; font-size: 16px; line-height: 1.2; }
+  .hla-comment-panel textarea { width: 100%; min-height: 90px; resize: vertical; border: 1px solid #cfd7e6; border-radius: 12px; padding: 10px; font: inherit; color: inherit; background: #fff; }
+  .hla-comment-list { display: grid; gap: 10px; margin-top: 12px; }
+  .hla-comment-card { border: 1px solid #dce3ef; border-radius: 14px; padding: 10px; background: #f8fafc; }
+  .hla-comment-card blockquote { margin: 0 0 8px; padding-left: 9px; border-left: 3px solid #1c7c72; color: #40506a; }
+  .hla-highlight { background: #fff0a8; border-radius: 3px; }
+  .hla-comment-target { outline: 2px solid #1c7c72; outline-offset: 3px; }
+</style>
+<section class="hla-comment-panel" id="hla-comment-panel" hidden aria-label="HTML export comments">
+  <h2>HTML comments</h2>
+  <p>Select text in the export, then add a comment. Copy Markdown for the agent or download JSON.</p>
+  <textarea id="hla-comment-input" placeholder="Comment on the selected text"></textarea>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+    <button type="button" id="hla-save-comment">Save comment</button>
+    <button type="button" id="hla-copy-md">Copy Markdown</button>
+    <button type="button" id="hla-download-json">Download JSON</button>
+  </div>
+  <div class="hla-comment-list" id="hla-comment-list"></div>
+</section>
+<div class="hla-comment-bar">
+  <button type="button" id="hla-open-comments">Comments</button>
+  <button type="button" id="hla-add-comment">Comment on selection</button>
+</div>
+<script>
+(() => {
+  const meta = { version: ${COMMENT_BUNDLE_VERSION}, sourceId: ${JSON.stringify(sourceId)}, title: ${JSON.stringify(title)}, exportUrl: location.href };
+  const key = "html-long-answer-comments:" + (meta.sourceId || location.pathname);
+  const panel = document.getElementById("hla-comment-panel");
+  const input = document.getElementById("hla-comment-input");
+  const list = document.getElementById("hla-comment-list");
+  let pending = null;
+  let comments = [];
+  try { comments = JSON.parse(localStorage.getItem(key) || "[]"); } catch (_) { comments = []; }
+  function closestBlock(node) {
+    const el = node && (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement);
+    return el ? el.closest("[data-commentable], p, li, h1, h2, h3, h4, h5, h6, pre, table, blockquote, aside") : null;
+  }
+  function contextFor(block, selected) {
+    const text = (block ? block.textContent : document.body.textContent || "").replace(/\\s+/g, " ").trim();
+    const needle = String(selected || "").replace(/\\s+/g, " ").trim();
+    const at = needle ? text.indexOf(needle) : -1;
+    return {
+      prefix: at >= 0 ? text.slice(Math.max(0, at - 180), at) : text.slice(0, 180),
+      suffix: at >= 0 ? text.slice(at + needle.length, at + needle.length + 180) : "",
+    };
+  }
+  function persist() { localStorage.setItem(key, JSON.stringify(comments)); render(); }
+  function bundle() { return { version: meta.version, sourceId: meta.sourceId, title: meta.title, exportUrl: meta.exportUrl, exportedAt: new Date().toISOString(), comments }; }
+  function markdown() {
+    const data = bundle();
+    const lines = ["I reviewed the HTML export and left comments.", "", "Source: " + data.title, "Source ID: " + data.sourceId, ""];
+    data.comments.forEach((comment, index) => {
+      lines.push("## Comment " + (index + 1), "", "Selected text:", "> " + comment.selectedText.replace(/\\n/g, "\\n> "), "", "Nearby context:", "> " + (comment.prefix || "") + " [" + comment.selectedText + "] " + (comment.suffix || ""), "", "Comment:", comment.comment, "");
+    });
+    return lines.join("\\n");
+  }
+  function render() {
+    list.innerHTML = "";
+    comments.forEach((comment, index) => {
+      const card = document.createElement("div");
+      card.className = "hla-comment-card";
+      const quote = document.createElement("blockquote");
+      quote.textContent = comment.selectedText;
+      const body = document.createElement("div");
+      body.textContent = comment.comment;
+      const jump = document.createElement("button");
+      jump.type = "button";
+      jump.textContent = "Jump";
+      jump.onclick = () => {
+        const target = comment.blockId ? document.querySelector('[data-block-id="' + CSS.escape(comment.blockId) + '"]') : null;
+        if (target) { target.scrollIntoView({ behavior: "smooth", block: "center" }); target.classList.add("hla-comment-target"); setTimeout(() => target.classList.remove("hla-comment-target"), 1800); }
+      };
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "Delete";
+      del.onclick = () => { comments.splice(index, 1); persist(); };
+      card.append(quote, body, jump, del);
+      list.appendChild(card);
+    });
+  }
+  document.getElementById("hla-open-comments").onclick = () => { panel.hidden = !panel.hidden; render(); };
+  document.getElementById("hla-add-comment").onclick = () => {
+    const selection = getSelection();
+    const selectedText = selection ? String(selection).trim() : "";
+    if (!selectedText) { alert("Select text in the export first."); return; }
+    const block = closestBlock(selection.anchorNode) || closestBlock(selection.focusNode);
+    const ctx = contextFor(block, selectedText);
+    pending = { selectedText, blockId: block ? (block.dataset.blockId || "") : "", prefix: ctx.prefix, suffix: ctx.suffix };
+    input.value = "";
+    panel.hidden = false;
+    input.focus();
+  };
+  document.getElementById("hla-save-comment").onclick = () => {
+    if (!pending) { alert("Select text and click Comment on selection first."); return; }
+    const text = input.value.trim();
+    if (!text) { alert("Write a comment first."); return; }
+    comments.push({ id: "cmt_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8), sourceId: meta.sourceId, blockId: pending.blockId, selectedText: pending.selectedText, prefix: pending.prefix, suffix: pending.suffix, comment: text, createdAt: new Date().toISOString() });
+    pending = null;
+    input.value = "";
+    persist();
+  };
+  document.getElementById("hla-copy-md").onclick = async () => {
+    const text = markdown();
+    if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+    else prompt("Copy comments for the agent:", text);
+  };
+  document.getElementById("hla-download-json").onclick = () => {
+    const blob = new Blob([JSON.stringify(bundle(), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "html-comments-" + (meta.sourceId || "export").slice(0, 12) + ".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  render();
+})();
+</script>`;
+}
+
+function injectAnnotationLayer(html, meta) {
+  const layer = buildAnnotationLayer(meta);
+  const source = String(html || '');
+  if (source.includes(TRUSTED_ANNOTATION_MARKER)) return source;
+  if (/<\/body\s*>/i.test(source)) return source.replace(/<\/body\s*>/i, `${layer}\n</body>`);
+  return `${source}\n${layer}`;
+}
+
+function validateCommentBundle(bundle, expectedSourceId) {
+  if (!bundle || typeof bundle !== 'object') throw new Error('Comment bundle must be a JSON object.');
+  if (bundle.version !== COMMENT_BUNDLE_VERSION) throw new Error(`Comment bundle version must be ${COMMENT_BUNDLE_VERSION}.`);
+  if (!Array.isArray(bundle.comments)) throw new Error('Comment bundle must include a comments array.');
+  if (expectedSourceId && bundle.sourceId && bundle.sourceId !== expectedSourceId) {
+    throw new Error('Comment bundle source does not match the last captured answer.');
+  }
+  return {
+    version: COMMENT_BUNDLE_VERSION,
+    sourceId: String(bundle.sourceId || ''),
+    title: String(bundle.title || 'HTML Export').slice(0, 160),
+    exportUrl: String(bundle.exportUrl || ''),
+    comments: bundle.comments.map((comment, index) => {
+      if (!comment || typeof comment !== 'object') throw new Error(`Comment ${index + 1} must be an object.`);
+      const selectedText = String(comment.selectedText || '').trim();
+      const body = String(comment.comment || '').trim();
+      if (!selectedText || !body) throw new Error(`Comment ${index + 1} must include selectedText and comment.`);
+      return {
+        id: String(comment.id || `comment-${index + 1}`).slice(0, 80),
+        blockId: String(comment.blockId || '').slice(0, 80),
+        selectedText: selectedText.slice(0, 4000),
+        prefix: String(comment.prefix || '').slice(0, 1000),
+        suffix: String(comment.suffix || '').slice(0, 1000),
+        comment: body.slice(0, 4000),
+        createdAt: String(comment.createdAt || ''),
+      };
+    }),
+  };
+}
+
+function buildCommentsPrompt(bundle) {
+  const lines = [
+    'I reviewed the HTML export and left comments.',
+    '',
+    `Source: ${bundle.title}`,
+    `Source ID: ${bundle.sourceId || 'unknown'}`,
+    bundle.exportUrl ? `Export: ${bundle.exportUrl}` : '',
+    '',
+  ].filter((line, index) => line || index < 4);
+  bundle.comments.forEach((comment, index) => {
+    lines.push(
+      `## Comment ${index + 1}`,
+      '',
+      'Selected text:',
+      `> ${comment.selectedText.replace(/\n/g, '\n> ')}`,
+      '',
+      'Nearby context:',
+      `> ${comment.prefix} [${comment.selectedText}] ${comment.suffix}`.trim(),
+      '',
+      'Comment:',
+      comment.comment,
+      ''
+    );
+  });
+  return lines.join('\n');
+}
+
 function isLongAnswer(text, config) {
   const source = String(text || '').trim();
   if (!source) return false;
@@ -545,15 +753,19 @@ function parseArgs(rawArgs) {
   return [];
 }
 
-function parseHtmlLastInput(text) {
+function parseHtmlCommandInput(text) {
   const source = typeof text === 'string' ? text.trim() : '';
   if (/^\/html-last-version\s*$/i.test(source)) {
     return { command: 'version', args: '' };
   }
 
-  const match = /^\/html-last(?:\s+([\s\S]*))?$/i.exec(source);
-  if (!match) return null;
-  return { command: 'export', args: match[1] || '' };
+  let match = /^\/html-last(?:\s+([\s\S]*))?$/i.exec(source);
+  if (match) return { command: 'export', args: match[1] || '' };
+
+  match = /^\/html-comments(?:\s+([\s\S]*))?$/i.exec(source);
+  if (match) return { command: 'comments', args: match[1] || '' };
+
+  return null;
 }
 
 async function resolveOpenCommand(command) {
@@ -815,6 +1027,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     const filePath = await writeRichHtmlArtifact({
       title: source.title,
       htmlText,
+      sourceId: source.id,
     });
     const meta = {
       path: filePath,
@@ -1056,6 +1269,43 @@ module.exports = function htmlLongAnswerExtension(pi) {
     await exportLocalHtml(ctx, state.lastEligible, 'local');
   }
 
+  async function readCommentBundle(args) {
+    const raw = parseArgs(args).join(' ').trim();
+    if (!raw) throw new Error('Pass a comments JSON file path or pasted JSON after /html-comments.');
+    if (/^\{[\s\S]*\}$/.test(raw)) return JSON.parse(raw);
+    const filePath = path.resolve(raw);
+    const text = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(text);
+  }
+
+  async function importCommentsFromCommand(args, ctx) {
+    if (!state.lastEligible || !state.lastEligible.text) {
+      try {
+        const branch = ctx && ctx.sessionManager && typeof ctx.sessionManager.getBranch === 'function'
+          ? ctx.sessionManager.getBranch()
+          : [];
+        hydrateLastEligibleFromBranch(branch);
+      } catch (_) {
+        // Warning below handles the miss.
+      }
+    }
+    const expectedSourceId = state.lastEligible && state.lastEligible.id;
+    const bundle = validateCommentBundle(await readCommentBundle(args), expectedSourceId);
+    const prompt = buildCommentsPrompt(bundle);
+    await appendCustomEntry(COMMENT_ENTRY_TYPE, { ...bundle, importedAt: Date.now() });
+    if (typeof pi.sendUserMessage === 'function') {
+      await pi.sendUserMessage(prompt, { deliverAs: 'followUp' });
+      notify(ctx, `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [html-long-answer ${EXTENSION_VERSION}]`, 'info');
+      return;
+    }
+    if (typeof pi.sendMessage === 'function') {
+      await pi.sendMessage(prompt, { deliverAs: 'followUp', triggerTurn: true });
+      notify(ctx, `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [html-long-answer ${EXTENSION_VERSION}]`, 'info');
+      return;
+    }
+    notify(ctx, prompt, 'info');
+  }
+
   if (typeof pi.setLabel === 'function') {
     try {
       pi.setLabel(`Long Answer HTML ${EXTENSION_VERSION}`);
@@ -1073,12 +1323,14 @@ module.exports = function htmlLongAnswerExtension(pi) {
     pi.on('session_branch', restoreHandler);
     pi.on('session_tree', restoreHandler);
     pi.on('input', async (event, ctx) => {
-      const parsedInput = parseHtmlLastInput(event && event.text);
+      const parsedInput = parseHtmlCommandInput(event && event.text);
       if (!parsedInput) return undefined;
 
       try {
         if (parsedInput.command === 'version') {
           notify(ctx, `html-long-answer ${EXTENSION_VERSION}`, 'info');
+        } else if (parsedInput.command === 'comments') {
+          await importCommentsFromCommand(parsedInput.args, ctx);
         } else {
           await exportLatestFromCommand(parsedInput.args, ctx);
         }
@@ -1107,6 +1359,15 @@ module.exports = function htmlLongAnswerExtension(pi) {
       },
     });
 
+    pi.registerCommand('html-comments', {
+      description: 'Import downloaded HTML comments JSON and send the review prompt back to the agent.',
+      handler: (args, ctx) => {
+        void importCommentsFromCommand(args, ctx).catch((error) => {
+          notifyCommandError(ctx, error);
+        });
+      },
+    });
+
     pi.registerCommand('html-last-version', {
       description: 'Show the loaded Long Answer HTML extension version.',
       handler: (_args, ctx) => {
@@ -1123,12 +1384,17 @@ module.exports._internals = {
   formatInline,
   getExportRoot,
   parseArgs,
-  parseHtmlLastInput,
+  parseHtmlLastInput: parseHtmlCommandInput,
   resolveOpenCommand,
   hasSelectableUi,
   renderMarkdownish,
   resolveForcedExportMode,
   validateRichHtmlDocument,
+  addCommentableAttributes,
+  buildAnnotationLayer,
+  buildCommentsPrompt,
+  injectAnnotationLayer,
+  validateCommentBundle,
   writeHtmlArtifact,
   writeRichHtmlArtifact,
 };

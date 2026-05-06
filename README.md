@@ -50,6 +50,7 @@ Instead it:
 | `/html-last pi` | Forces designed HTML via the current Pi model |
 | `/html-last gemini` | Forces designed HTML via Gemini CLI |
 | `/html-last-version` | Shows the loaded extension version |
+| `/html-comments <comments.json>` | Imports downloaded HTML review comments and sends them back to the current agent as a structured follow-up |
 
 ## Quick start
 
@@ -120,6 +121,7 @@ pi install git:https://github.com/zakelfassi/pi-html-long-answer-extension.git@v
 - Raw URLs such as `https://example.com` are linkified in local exports.
 - Rich Pi/Gemini renders must be standalone HTML documents with inline CSS only.
 - Rich HTML is validated before writing: scripts, event-handler attributes, `javascript:` URLs, external assets, external CSS URLs, unsafe tags, oversized output, and overly complex output are rejected or routed to fallback behavior.
+- HTML exports include a trusted local annotation layer: highlight text in the browser, add comments, then copy Markdown for the agent or download a comments JSON bundle.
 - Invalid, unsafe, or non-HTML rich output falls back to the local renderer instead of writing a malformed nested document.
 
 ## Repo layout
@@ -160,6 +162,7 @@ If you modify it, re-test these flows:
 - `/html-last local` -> HTML writes and opens
 - `/html-last pi` -> second-pass render path queues/runs and validates rich HTML
 - `/html-last gemini` -> Gemini render path succeeds or cleanly falls back
+- `/html-comments <comments.json>` -> downloaded browser comments validate against the captured source and queue a structured review prompt
 - `/html-last-version` -> version shown in-session
 
 ## Trust and security
