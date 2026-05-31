@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { spawn } = require('node:child_process');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
@@ -33,6 +34,25 @@ async function withTempExportRoot(fn) {
   }
 }
 
+function runNodeScript(scriptPath, args, input, env = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [scriptPath, ...(args || [])], {
+      cwd: repoRoot,
+      env: { ...process.env, ...env },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      resolve({ code, stdout, stderr });
+    });
+    child.stdin.end(input || '');
+  });
+}
+
 test('package metadata preserves npm Pi and OMP entry contracts', () => {
   assert.equal(packageJson.private, false);
   assert.equal(packageJson.type, 'commonjs');
@@ -43,7 +63,7 @@ test('package metadata preserves npm Pi and OMP entry contracts', () => {
   assert.ok(packageJson.keywords.includes('pi-package'));
   assert.ok(packageJson.keywords.includes('pi-extension'));
   assert.ok(packageJson.keywords.includes('agentskills'));
-  assert.deepEqual(packageJson.files, ['SKILL.md', 'index.js', 'README.md', 'assets/', 'references/']);
+  assert.deepEqual(packageJson.files, ['SKILL.md', 'bin/', 'hooks/', 'index.js', 'README.md', 'assets/', 'references/']);
   assert.ok(packageJson.scripts.test.includes('node --test'));
 
   for (const entry of [packageJson.main, packageJson.pi.extensions[0], packageJson.omp.extensions[0]]) {
@@ -353,4 +373,52 @@ test('/html-comments accepts pasted JSON without collapsing comment text', async
   assert.equal(sentMessages.length, 1);
   assert.match(sentMessages[0], /Keep  two   spaces\nand this newline\./);
   assert.equal(notifications.some((message) => message.includes('Queued 1 HTML comment')), true);
+});
+
+test('htmlify-answer CLI writes a self-contained export from stdin', async () => {
+  await withTempExportRoot(async (tempDir) => {
+    const result = await runNodeScript(
+      path.join(repoRoot, 'bin/htmlify-answer.js'),
+      ['--title', 'CLI Export', '--mode', 'test-cli'],
+      '# CLI Export\n\nThis is a long-enough direct CLI export for agent hooks.',
+      { HTMLIFY_EXPORT_ROOT: tempDir }
+    );
+
+    assert.equal(result.code, 0, result.stderr);
+    const filePath = result.stdout.trim();
+    assert.equal(path.dirname(filePath), tempDir);
+    const html = await fs.readFile(filePath, 'utf8');
+    assert.match(html, /<!DOCTYPE html>/);
+    assert.match(html, /CLI Export/);
+    assert.match(html, /htmlify trusted annotation layer/);
+  });
+});
+
+test('Claude Code Stop hook exports only answers above threshold', async () => {
+  await withTempExportRoot(async (tempDir) => {
+    const shortResult = await runNodeScript(
+      path.join(repoRoot, 'hooks/claude-code-stop-htmlify.js'),
+      [],
+      JSON.stringify({ hook_event_name: 'Stop', last_assistant_message: 'short' }),
+      { HTMLIFY_EXPORT_ROOT: tempDir, HTMLIFY_MIN_CHARS: '40' }
+    );
+    assert.equal(shortResult.code, 0, shortResult.stderr);
+    assert.equal(shortResult.stdout, '');
+
+    const longText = '# Hook Export\n\n' + 'This answer should become an HTML artifact. '.repeat(6);
+    const longResult = await runNodeScript(
+      path.join(repoRoot, 'hooks/claude-code-stop-htmlify.js'),
+      [],
+      JSON.stringify({ hook_event_name: 'Stop', last_assistant_message: longText }),
+      { HTMLIFY_EXPORT_ROOT: tempDir, HTMLIFY_MIN_CHARS: '40' }
+    );
+
+    assert.equal(longResult.code, 0, longResult.stderr);
+    const output = JSON.parse(longResult.stdout);
+    assert.match(output.systemMessage, /htmlify wrote a long-answer HTML artifact:/);
+    const filePath = output.systemMessage.split(': ').pop();
+    const html = await fs.readFile(filePath, 'utf8');
+    assert.match(html, /Hook Export/);
+    assert.match(html, /claude-code-stop-hook/);
+  });
 });

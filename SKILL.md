@@ -3,7 +3,7 @@ name: htmlify
 description: Create self-contained HTML artifacts from agent or repo context, including operator briefs, build plans, implementation maps, PR/release packets, incident timelines, decision briefs, reports, explainers, diagrams, prototypes, and lightweight editors. Use when the user asks to turn dense text, code evidence, plans, reviews, or status into browser-ready HTML instead of a markdown wall.
 compatibility: Works in agentskills.io-compatible clients. Optional Pi/OMP extension runtime is in index.js and requires Node 20+.
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
   source: "https://github.com/zakelfassi/htmlify"
 ---
 
@@ -80,6 +80,8 @@ For most operator/build artifacts:
 ## Rich Artifact Patterns
 
 Load [references/htmlify-principles.md](references/htmlify-principles.md) when the artifact needs deeper mode selection, design guidance, or examples inspired by the HTML effectiveness catalogue.
+
+Load [references/agent-integrations.md](references/agent-integrations.md) when the user asks how to install htmlify into Codex, Claude Code, Cursor, Windsurf, Aider, Pi/OMP, or other coding agents, or asks for hook-based automatic long-answer export.
 
 Use these modules when useful:
 

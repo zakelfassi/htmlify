@@ -36,6 +36,57 @@ htmlify/SKILL.md
 
 The skill uses progressive disclosure: `SKILL.md` is the activation surface, and `references/htmlify-principles.md` is loaded only when deeper artifact guidance is needed.
 
+## Coding Agent Integrations
+
+htmlify can be used two ways across coding agents:
+
+- Skill/manual mode: install the folder and invoke `htmlify` when a response should become a browser-ready artifact.
+- Hook/automatic mode: configure the agent to write an HTML artifact when a final answer is longer than a threshold.
+
+Codex local skill install:
+
+```bash
+mkdir -p ~/.codex/skills
+git clone https://github.com/zakelfassi/htmlify.git ~/.codex/skills/htmlify
+```
+
+Claude Code skill install:
+
+```bash
+mkdir -p ~/.claude/skills
+git clone https://github.com/zakelfassi/htmlify.git ~/.claude/skills/htmlify
+```
+
+Claude Code optional Stop hook:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/zakelfassi/.claude/skills/htmlify/hooks/claude-code-stop-htmlify.js",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The Claude hook reads `last_assistant_message` from the Stop event and writes an HTML artifact when it is at least `HTMLIFY_MIN_CHARS` characters. Default threshold is `2500`.
+
+For Cursor, Windsurf, Aider, and other agents, point the agent at `SKILL.md` or use the bundled CLI:
+
+```bash
+printf '%s' "$LONG_ANSWER_TEXT" | npx @zakelfassi/htmlify htmlify-answer --title "Agent Answer"
+```
+
+See [references/agent-integrations.md](references/agent-integrations.md) for project-level rules, hook safety, and per-agent recipes.
+
 ## Extension Install
 
 Native Pi npm install:
@@ -109,7 +160,12 @@ Legacy command aliases remain available: `/html-last`, `/html-last-version`, and
 htmlify/
 ├── .github/workflows/ci.yml
 ├── assets/
+├── bin/
+│   └── htmlify-answer.js
+├── hooks/
+│   └── claude-code-stop-htmlify.js
 ├── references/
+│   ├── agent-integrations.md
 │   └── htmlify-principles.md
 ├── test/
 │   └── extension.test.js

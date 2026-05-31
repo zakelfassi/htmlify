@@ -1,15 +1,20 @@
 {
   "name": "@zakelfassi/htmlify",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": false,
   "description": "Turn long agent answers into self-contained, browser-ready HTML artifacts for Pi, OMP, and agentskills-compatible workflows.",
   "type": "commonjs",
   "main": "index.js",
+  "bin": {
+    "htmlify-answer": "./bin/htmlify-answer.js"
+  },
   "scripts": {
     "test": "node --test test/*.test.js"
   },
   "files": [
     "SKILL.md",
+    "bin/",
+    "hooks/",
     "index.js",
     "README.md",
     "assets/",
