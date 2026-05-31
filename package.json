@@ -6,7 +6,7 @@
   "type": "commonjs",
   "main": "index.js",
   "bin": {
-    "htmlify-answer": "./bin/htmlify-answer.js"
+    "htmlify-answer": "bin/htmlify-answer.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js"
@@ -22,7 +22,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/zakelfassi/htmlify.git"
+    "url": "git+https://github.com/zakelfassi/htmlify.git"
   },
   "homepage": "https://github.com/zakelfassi/htmlify#readme",
   "bugs": {
