@@ -23,11 +23,11 @@
 
   <g opacity="0.95">
     <rect x="88" y="72" width="400" height="44" rx="22" fill="#102032" stroke="#28405A"/>
-    <text x="122" y="101" fill="#A5B4C8" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">HTML exports for long answers in Pi / OMP</text>
+    <text x="122" y="101" fill="#A5B4C8" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">htmlify exports for agents, Pi, and OMP</text>
   </g>
 
-  <text x="88" y="200" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="74" font-weight="800">Turn long answers</text>
-  <text x="88" y="284" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="74" font-weight="800">into designed HTML</text>
+  <text x="88" y="200" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="74" font-weight="800">Turn dense answers</text>
+  <text x="88" y="284" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="74" font-weight="800">into useful HTML</text>
   <text x="88" y="350" fill="#96A9C4" font-family="Inter, Arial, sans-serif" font-size="28">Capture long responses, choose Gemini or Pi for a designed pass,</text>
   <text x="88" y="390" fill="#96A9C4" font-family="Inter, Arial, sans-serif" font-size="28">and open the result instantly in your browser.</text>
 
@@ -50,7 +50,7 @@
   <g filter="url(#shadow)">
     <rect x="858" y="130" width="654" height="662" rx="30" fill="#F8FAFC"/>
     <rect x="902" y="172" width="168" height="30" rx="15" fill="#DDF6EE"/>
-    <text x="928" y="192" fill="#1C7C72" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800">PI HTML EXPORT</text>
+    <text x="928" y="192" fill="#1C7C72" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800">HTMLIFY EXPORT</text>
 
     <text x="902" y="250" fill="#13253C" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="800">Audit all local branches</text>
     <text x="902" y="302" fill="#5D6B82" font-family="Inter, Arial, sans-serif" font-size="22">A designed HTML export with excerpt, outline, clickable links,</text>

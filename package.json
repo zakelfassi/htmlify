@@ -1,31 +1,36 @@
 {
-  "name": "pi-html-long-answer-extension",
-  "version": "0.2.2",
+  "name": "@zakelfassi/htmlify",
+  "version": "0.3.0",
   "private": false,
-  "description": "Long-answer HTML export extension for Oh My Pi and Pi.",
+  "description": "Turn long agent answers into self-contained, browser-ready HTML artifacts for Pi, OMP, and agentskills-compatible workflows.",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
     "test": "node --test test/*.test.js"
   },
   "files": [
+    "SKILL.md",
     "index.js",
     "README.md",
-    "assets/"
+    "assets/",
+    "references/"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/zakelfassi/pi-html-long-answer-extension.git"
+    "url": "https://github.com/zakelfassi/htmlify.git"
   },
-  "homepage": "https://github.com/zakelfassi/pi-html-long-answer-extension#readme",
+  "homepage": "https://github.com/zakelfassi/htmlify#readme",
   "bugs": {
-    "url": "https://github.com/zakelfassi/pi-html-long-answer-extension/issues"
+    "url": "https://github.com/zakelfassi/htmlify/issues"
   },
   "keywords": [
+    "agentskills",
+    "agent-skill",
     "oh-my-pi",
     "omp",
     "pi",
     "extension",
+    "operator-brief",
     "html",
     "export",
     "gemini",

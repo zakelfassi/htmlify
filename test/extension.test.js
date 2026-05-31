@@ -18,16 +18,16 @@ function richDocument(body, head = '<meta charset="utf-8" /><style>body{font-fam
 }
 
 async function withTempExportRoot(fn) {
-  const previous = process.env.PI_HTML_LONG_ANSWER_EXPORT_ROOT;
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'html-long-answer-test-'));
-  process.env.PI_HTML_LONG_ANSWER_EXPORT_ROOT = tempDir;
+  const previous = process.env.HTMLIFY_EXPORT_ROOT;
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'htmlify-test-'));
+  process.env.HTMLIFY_EXPORT_ROOT = tempDir;
   try {
     return await fn(tempDir);
   } finally {
     if (previous === undefined) {
-      delete process.env.PI_HTML_LONG_ANSWER_EXPORT_ROOT;
+      delete process.env.HTMLIFY_EXPORT_ROOT;
     } else {
-      process.env.PI_HTML_LONG_ANSWER_EXPORT_ROOT = previous;
+      process.env.HTMLIFY_EXPORT_ROOT = previous;
     }
     await fs.rm(tempDir, { recursive: true, force: true });
   }
@@ -42,7 +42,8 @@ test('package metadata preserves npm Pi and OMP entry contracts', () => {
   assert.equal(packageJson.omp.extensions[0], './index.js');
   assert.ok(packageJson.keywords.includes('pi-package'));
   assert.ok(packageJson.keywords.includes('pi-extension'));
-  assert.deepEqual(packageJson.files, ['index.js', 'README.md', 'assets/']);
+  assert.ok(packageJson.keywords.includes('agentskills'));
+  assert.deepEqual(packageJson.files, ['SKILL.md', 'index.js', 'README.md', 'assets/', 'references/']);
   assert.ok(packageJson.scripts.test.includes('node --test'));
 
   for (const entry of [packageJson.main, packageJson.pi.extensions[0], packageJson.omp.extensions[0]]) {
@@ -78,15 +79,18 @@ test('extension registers commands/events and handles long assistant messages', 
     appendEntry: async (type, data) => entries.push({ type, data }),
   });
 
-  assert.match(labels[0], /^Long Answer HTML /);
+  assert.match(labels[0], /^htmlify /);
   assert.equal(typeof events.get('session_start'), 'function');
   assert.equal(typeof events.get('session_branch'), 'function');
   assert.equal(typeof events.get('session_tree'), 'function');
   assert.equal(typeof events.get('message_end'), 'function');
   assert.equal(typeof events.get('input'), 'function');
   assert.equal(typeof commands.get('html-last').handler, 'function');
+  assert.equal(typeof commands.get('htmlify').handler, 'function');
   assert.equal(typeof commands.get('html-last-version').handler, 'function');
+  assert.equal(typeof commands.get('htmlify-version').handler, 'function');
   assert.equal(typeof commands.get('html-comments').handler, 'function');
+  assert.equal(typeof commands.get('htmlify-comments').handler, 'function');
 
   const inputResult = await events.get('input')({ text: '/html-last' }, {
     ui: { notify: (message) => notifications.push(message) },
@@ -116,8 +120,8 @@ test('extension registers commands/events and handles long assistant messages', 
 
 test('/html-last choose falls back to local export when chooser is unavailable', async () => {
   await withTempExportRoot(async () => {
-    const previousSkipOpen = process.env.PI_HTML_LONG_ANSWER_SKIP_OPEN;
-    process.env.PI_HTML_LONG_ANSWER_SKIP_OPEN = '1';
+    const previousSkipOpen = process.env.HTMLIFY_SKIP_OPEN;
+    process.env.HTMLIFY_SKIP_OPEN = '1';
 
     try {
       const events = new Map();
@@ -145,9 +149,9 @@ test('/html-last choose falls back to local export when chooser is unavailable',
       assert.equal(notifications.some((message) => message.includes('HTML export written')), true);
     } finally {
       if (previousSkipOpen === undefined) {
-        delete process.env.PI_HTML_LONG_ANSWER_SKIP_OPEN;
+        delete process.env.HTMLIFY_SKIP_OPEN;
       } else {
-        process.env.PI_HTML_LONG_ANSWER_SKIP_OPEN = previousSkipOpen;
+        process.env.HTMLIFY_SKIP_OPEN = previousSkipOpen;
       }
     }
   });
@@ -176,7 +180,7 @@ test('local export preserves shell and representative markdown-ish rendering', a
     });
     const html = await fs.readFile(filePath, 'utf8');
 
-    assert.match(html, /<div class="eyebrow">Pi HTML export<\/div>/);
+    assert.match(html, /<div class="eyebrow">htmlify export<\/div>/);
     assert.match(html, /<strong>Mode<\/strong><br \/>local/);
     assert.match(html, /href="https:\/\/example\.com"/);
     assert.match(html, /<h2 data-commentable="true" data-block-id="b-1">Local Export Title<\/h2>/);
@@ -184,7 +188,7 @@ test('local export preserves shell and representative markdown-ish rendering', a
     assert.match(html, /<ul><li data-commentable="true" data-block-id="b-3">first item<\/li><li data-commentable="true" data-block-id="b-4">second item<\/li><\/ul>/);
     assert.match(html, /<table data-commentable="true" data-block-id="b-5">/);
     assert.equal((html.match(/<script/gi) || []).length, 1);
-    assert.match(html, /html-long-answer trusted annotation layer/);
+    assert.match(html, /htmlify trusted annotation layer/);
     assert.match(html, /data-commentable="true" data-block-id="b-1"/);
     assert.match(html, /id="hla-add-comment"/);
   });
@@ -203,7 +207,7 @@ test('rich export writes one standalone document instead of nesting it in the lo
     assert.equal((html.match(/<html\b/gi) || []).length, 1);
     assert.equal((html.match(/<body\b/gi) || []).length, 1);
     assert.doesNotMatch(html, /<article class="content">[\s\S]*<!DOCTYPE html/i);
-    assert.doesNotMatch(html, /<div class="eyebrow">Pi HTML export<\/div>/);
+    assert.doesNotMatch(html, /<div class="eyebrow">htmlify export<\/div>/);
     assert.match(html, /<h1 data-commentable="true" data-block-id="b-1">Designed Export<\/h1>/);
   });
 });
@@ -218,7 +222,7 @@ test('rich export injects trusted annotation layer after validation', async () =
     });
     const html = await fs.readFile(filePath, 'utf8');
 
-    assert.match(html, /html-long-answer trusted annotation layer/);
+    assert.match(html, /htmlify trusted annotation layer/);
     assert.match(html, /sourceId: "abc123"/);
     assert.match(html, /id="hla-download-json"/);
     assert.match(html, /<p data-commentable="true" data-block-id="b-2">Safe body\.<\/p>/);
@@ -285,8 +289,11 @@ test('rich extraction and command mode parsing are deterministic', () => {
   assert.equal(internals.hasSelectableUi({ hasUI: true, ui: {} }), false);
   assert.deepEqual(internals.parseHtmlLastInput('/html-last quick'), { command: 'export', args: 'quick' });
   assert.deepEqual(internals.parseHtmlLastInput(' /html-last-version '), { command: 'version', args: '' });
+  assert.deepEqual(internals.parseHtmlLastInput(' /htmlify-version '), { command: 'version', args: '' });
+  assert.deepEqual(internals.parseHtmlLastInput('/htmlify gemini'), { command: 'export', args: 'gemini' });
   assert.equal(internals.parseHtmlLastInput('/html-lastly'), null);
   assert.deepEqual(internals.parseHtmlLastInput('/html-comments comments.json'), { command: 'comments', args: 'comments.json' });
+  assert.deepEqual(internals.parseHtmlLastInput('/htmlify-comments comments.json'), { command: 'comments', args: 'comments.json' });
   assert.equal(internals.resolveForcedExportMode('designed'), 'rich-pi');
   assert.equal(internals.resolveForcedExportMode(''), null);
 });

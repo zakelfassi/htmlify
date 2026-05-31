@@ -1,34 +1,72 @@
-# html-long-answer
+# htmlify
 
-Make long assistant answers exportable as designed HTML in both Oh My Pi / OMP and legacy Pi.
+Turn long agent answers into self-contained HTML artifacts people can scan, discuss, annotate, and ship.
 
 <p>
   <img src="./assets/hero.svg" alt="Hero graphic showing a terminal chooser on the left and a designed HTML export preview on the right" width="100%" />
 </p>
 
-## Why this exists
+## What It Is
 
-Long answers are useful, but they are not always pleasant to read inside the terminal. This extension captures long assistant replies, keeps them available for later export, and lets you turn them into browser-opened HTML in one step.
+htmlify is both:
 
-It is built for two workflows:
-- fast local HTML when you just want a readable artifact now
-- richer designed HTML when you want a second-pass render via the current Pi model or Gemini CLI
+- a Pi / Oh My Pi extension for exporting long assistant replies as local HTML
+- an agentskills.io-compatible skill for asking coding agents to produce useful single-file HTML briefs, maps, reviews, reports, explainers, and lightweight editors
 
-## What users should look for
+It merges three ideas:
 
-<p>
-  <img src="./assets/flow.svg" alt="Flow diagram showing the extension behavior: long answer finishes normally, user runs html-last, browser opens the export" width="100%" />
-</p>
+- Long answers should stay visible in the terminal until the user explicitly exports them.
+- HTML beats markdown when the work is spatial, comparative, interactive, or meeting-facing.
+- Operator artifacts should be evidence-first, visual, self-contained, and production-safe.
 
-The extension does **not** interrupt or replace the end of a long answer.
+## Skill Install
 
-Instead it:
-1. lets the assistant answer finish normally in the terminal
-2. captures the answer into session state
-3. waits for the user to run `/html-last`
-4. writes and opens the HTML artifact in the default browser
+This repository root is a valid Agent Skill directory because it contains `SKILL.md`.
 
-## Render modes
+```bash
+mkdir -p ~/.codex/skills
+git clone https://github.com/zakelfassi/htmlify.git ~/.codex/skills/htmlify
+```
+
+For other clients that support the agentskills.io format, install or copy this folder into that client's skills directory. The required skill entrypoint is:
+
+```text
+htmlify/SKILL.md
+```
+
+The skill uses progressive disclosure: `SKILL.md` is the activation surface, and `references/htmlify-principles.md` is loaded only when deeper artifact guidance is needed.
+
+## Extension Install
+
+Native Pi npm install:
+
+```bash
+pi install npm:@zakelfassi/htmlify
+```
+
+Native Pi git install:
+
+```bash
+pi install git:https://github.com/zakelfassi/htmlify.git
+```
+
+Oh My Pi / OMP global install:
+
+```bash
+mkdir -p ~/.omp/agent/extensions
+git clone https://github.com/zakelfassi/htmlify.git ~/.omp/agent/extensions/htmlify
+```
+
+Then ask for a long answer and run:
+
+```text
+/htmlify-version
+/htmlify local
+```
+
+Legacy command aliases remain available: `/html-last`, `/html-last-version`, and `/html-comments`.
+
+## Render Modes
 
 <p>
   <img src="./assets/render-modes.svg" alt="Three render mode cards for quick local, current Pi model, and Gemini CLI" width="100%" />
@@ -44,109 +82,45 @@ Instead it:
 
 | Command | Result |
 |---|---|
-| `/html-last` | Opens quick local HTML without starting a Pi model turn |
-| `/html-last choose` | Opens a render-mode chooser |
-| `/html-last local` | Forces quick local HTML |
-| `/html-last pi` | Forces designed HTML via the current Pi model |
-| `/html-last gemini` | Forces designed HTML via Gemini CLI |
-| `/html-last-version` | Shows the loaded extension version |
-| `/html-comments <comments.json>` | Imports downloaded HTML review comments and sends them back to the current agent as a structured follow-up |
+| `/htmlify` | Opens quick local HTML without starting a Pi model turn |
+| `/htmlify choose` | Opens a render-mode chooser |
+| `/htmlify local` | Forces quick local HTML |
+| `/htmlify pi` | Forces designed HTML via the current Pi model |
+| `/htmlify gemini` | Forces designed HTML via Gemini CLI |
+| `/htmlify-version` | Shows the loaded extension version |
+| `/htmlify-comments <comments.json>` | Imports downloaded HTML review comments and sends them back to the current agent |
 
-## Quick start
+## Runtime Behavior
 
-Native Pi npm install:
+<p>
+  <img src="./assets/flow.svg" alt="Flow diagram showing the extension behavior: long answer finishes normally, user runs htmlify, browser opens the export" width="100%" />
+</p>
 
-```bash
-pi install npm:pi-html-long-answer-extension
-```
-
-Native Pi git install:
-
-```bash
-pi install git:https://github.com/zakelfassi/pi-html-long-answer-extension.git
-```
-
-Oh My Pi / OMP global install:
-
-```bash
-mkdir -p ~/.omp/agent/extensions
-git clone https://github.com/zakelfassi/pi-html-long-answer-extension.git \
-  ~/.omp/agent/extensions/html-long-answer
-```
-
-Then ask for a long answer and run:
-
-```text
-/html-last-version
-/html-last local
-```
-
-## Installation and compatibility matrix
-
-This package is published to npm for Pi package discovery and remains installable directly from git for pinned or source-reviewed installs.
-
-| Harness / platform | Install or load path | Verify after install | Expected result | Status |
-|---|---|---|---|---|
-| Native Pi npm package | `pi install npm:pi-html-long-answer-extension` | Run `/html-last-version`, then `/html-last local` after a long answer | Version notification, then a browser-opened local HTML export | Supported package path; appears in npm-backed Pi package discovery |
-| Native / legacy Pi git | `pi install git:https://github.com/zakelfassi/pi-html-long-answer-extension.git` | Run `/html-last-version`, then `/html-last local` after a long answer | Version notification, then a browser-opened local HTML export | Supported source install path; verify on your installed Pi version |
-| Manual Pi extension root | Clone to `~/.pi/agent/extensions/html-long-answer` | Restart/load Pi, then run `/html-last-version` and `/html-last local` | Extension auto-loads from the global root | Supported path; verify on your installed Pi version |
-| Oh My Pi / OMP | Clone to `~/.omp/agent/extensions/html-long-answer` | Restart/load OMP, then run `/html-last-version` and `/html-last local` | Extension auto-loads from the OMP global root | Supported path; verify on your installed OMP version |
-| OMP one-off test | `omp -e /absolute/path/to/index.js` | Run `/html-last-version` | Version notification appears | Supported one-off smoke path |
-| Pi-compatible derived harnesses | Use the Pi npm/git/manual instructions if the harness honors Pi `package.json.pi.extensions` or Pi extension roots | Run `/html-last-version` and `/html-last local` | Same command behavior as Pi | Harness-specific commands are unverified |
-| Gemini CLI | Optional external renderer used by `/html-last gemini` | Run `/html-last gemini` after a long answer | Designed HTML export, or a clean fallback to local HTML if Gemini is unavailable/invalid | Optional |
-
-## Verify after install
-
-| Command | Expected result |
-|---|---|
-| `/html-last-version` | Shows the loaded `html-long-answer` version |
-| `/html-last` | Writes a local HTML artifact and opens it in the default browser without starting a Pi model turn |
-| `/html-last choose` | Opens the render-mode chooser when UI selection is available |
-| `/html-last local` | Writes a local HTML artifact and opens it in the default browser |
-| `/html-last pi` | Queues a current-model designed HTML pass, then writes the result or falls back safely |
-| `/html-last gemini` | Uses Gemini CLI when available; invalid/unsafe/non-HTML output falls back to local HTML |
-
-For reproducible installs, pin an npm version or a git ref/tag once you choose a release:
-
-```bash
-pi install npm:pi-html-long-answer-extension@0.2.0
-pi install git:https://github.com/zakelfassi/pi-html-long-answer-extension.git@v0.2.0
-```
-
-## Runtime behavior
-
-- Long answers are detected from message length / line / paragraph thresholds.
-- Long answers are captured into session state so `/html-last` can work on prior assistant replies.
+- Long answers are detected from message length, line count, or paragraph count.
+- Long answers are captured into session state so export commands can work after the answer finishes.
 - Local and designed exports open automatically in the browser after the file is written.
-- Raw URLs such as `https://example.com` are linkified in local exports.
+- Exports include a trusted local annotation layer: highlight text, add comments, copy Markdown for the agent, or download a comments JSON bundle.
 - Rich Pi/Gemini renders must be standalone HTML documents with inline CSS only.
 - Rich HTML is validated before writing: scripts, event-handler attributes, `javascript:` URLs, external assets, external CSS URLs, unsafe tags, oversized output, and overly complex output are rejected or routed to fallback behavior.
-- HTML exports include a trusted local annotation layer: highlight text in the browser, add comments, then copy Markdown for the agent or download a comments JSON bundle.
-- Invalid, unsafe, or non-HTML rich output falls back to the local renderer instead of writing a malformed nested document.
 
-## Repo layout
+## Repo Layout
 
 ```text
-html-long-answer/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
+htmlify/
+├── .github/workflows/ci.yml
 ├── assets/
-│   ├── flow.svg
-│   ├── hero.svg
-│   └── render-modes.svg
+├── references/
+│   └── htmlify-principles.md
 ├── test/
 │   └── extension.test.js
 ├── index.js
 ├── package.json
 ├── pnpm-lock.yaml
 ├── README.md
-└── .gitignore
+└── SKILL.md
 ```
 
-## Development notes
-
-The extension runtime still lives in a single file (`index.js`) so it is easy to install directly into a Pi or OMP extension root. Tests and CI live outside the runtime path.
+## Development
 
 Use PNPM:
 
@@ -155,18 +129,26 @@ pnpm install
 pnpm test
 ```
 
-If you modify it, re-test these flows:
-- long answer -> answer remains visible; no automatic replacement notice appears
-- `/html-last` -> local HTML writes and opens without starting a Pi model turn
-- `/html-last choose` -> chooser appears
-- `/html-last local` -> HTML writes and opens
-- `/html-last pi` -> second-pass render path queues/runs and validates rich HTML
-- `/html-last gemini` -> Gemini render path succeeds or cleanly falls back
-- `/html-comments <comments.json>` -> downloaded browser comments validate against the captured source and queue a structured review prompt
-- `/html-last-version` -> version shown in-session
+If you modify the runtime, re-test these flows:
 
-## Trust and security
+- long answer -> answer remains visible; no automatic replacement notice appears
+- `/htmlify` -> local HTML writes and opens without starting a Pi model turn
+- `/htmlify choose` -> chooser appears when supported
+- `/htmlify pi` -> second-pass render path queues/runs and validates rich HTML
+- `/htmlify gemini` -> Gemini render path succeeds or cleanly falls back
+- `/htmlify-comments <comments.json>` -> browser comments validate and queue a structured review prompt
+- `/htmlify-version` -> version shown in-session
+
+## Publishing
+
+The unscoped npm name `htmlify` is already taken. Publish this package under the scoped name:
+
+```bash
+NPM_CONFIG_CACHE=/private/tmp/htmlify-npm-cache npm publish --access public
+```
+
+## Trust And Security
 
 Extensions run with your user permissions. Only install from sources you trust, review the source before installing, and pin a git ref or tag when you need reproducible behavior.
 
-Rich HTML generated by Pi or Gemini is treated as untrusted until it passes this extension's validation. The validator is intentionally conservative: if rich output includes active scripts, event handlers, external assets, or unsafe URLs, the extension falls back to local HTML rather than writing the rich document.
+Rich HTML generated by Pi or Gemini is treated as untrusted until it passes validation. The validator is intentionally conservative: if rich output includes active scripts, event handlers, external assets, or unsafe URLs, htmlify falls back to local HTML rather than writing the rich document.

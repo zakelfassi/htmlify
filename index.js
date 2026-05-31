@@ -1,4 +1,5 @@
-const EXTENSION_VERSION = '2026-04-26a';
+const EXTENSION_VERSION = '2026-05-31a';
+const PRODUCT_NAME = 'htmlify';
 
 const fs = require('fs/promises');
 const path = require('path');
@@ -8,7 +9,8 @@ const { execFile, spawn } = require('child_process');
 const { promisify } = require('util');
 
 const execFileAsync = promisify(execFile);
-const DEFAULT_EXPORT_ROOT = path.join(os.tmpdir(), 'pi-html-exports');
+const DEFAULT_EXPORT_ROOT = path.join(os.tmpdir(), 'htmlify-exports');
+// Keep legacy custom entry types so existing Pi/OMP sessions can restore pre-rename exports.
 const PREF_ENTRY_TYPE = 'html-long-answer-pref';
 const SOURCE_ENTRY_TYPE = 'html-long-answer-source';
 const EXPORT_ENTRY_TYPE = 'html-long-answer-export';
@@ -29,7 +31,7 @@ const EXTERNAL_ASSET_ATTR = /(?:\s(?:src|poster)\s*=\s*(['\"]?)\s*(?:https?:)?\/
 const EXTERNAL_CSS_URL = /(?:url\(\s*(['\"]?)\s*(?:https?:)?\/\/|@import\s+(?:url\(\s*)?(['\"]?)\s*(?:https?:)?\/\/)/i;
 const OPEN_FAILURE_WINDOW_MS = 1000;
 
-const TRUSTED_ANNOTATION_MARKER = '<!-- html-long-answer trusted annotation layer -->';
+const TRUSTED_ANNOTATION_MARKER = '<!-- htmlify trusted annotation layer -->';
 
 function sha(input) {
   return crypto.createHash('sha1').update(String(input || '')).digest('hex');
@@ -282,7 +284,7 @@ function buildLocalHtmlDocument(title, body, meta) {
     :root {
       color-scheme: light;
       --bg: #f6f7fb;
-      --panel: #ffffff;
+      --panel: #fbfdff;
       --text: #162033;
       --muted: #5d6b82;
       --line: #d8deea;
@@ -401,7 +403,7 @@ function buildLocalHtmlDocument(title, body, meta) {
       border: 1px solid var(--line);
       border-radius: 14px;
       overflow: hidden;
-      background: #fff;
+      background: #fbfdff;
     }
     th, td {
       padding: 12px 14px;
@@ -416,7 +418,7 @@ function buildLocalHtmlDocument(title, body, meta) {
       .aside-stack { position: static; }
     }
     @media print {
-      body { background: #fff; }
+      body { background: #fbfdff; }
       .wrap { max-width: none; padding: 0; }
       .hero, .content, .aside-panel { border: 0; box-shadow: none; }
       .main-grid { grid-template-columns: 1fr; }
@@ -427,7 +429,7 @@ function buildLocalHtmlDocument(title, body, meta) {
   <main class="wrap">
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow">Pi HTML export</div>
+        <div class="eyebrow">htmlify export</div>
         <h1>${escapeHtml(title)}</h1>
         ${meta.excerpt ? `<p class="hero-excerpt">${escapeHtml(meta.excerpt)}</p>` : ''}
         <div class="meta">
@@ -462,7 +464,7 @@ async function ensureDir(dir) {
 }
 
 function getExportRoot() {
-  return process.env.PI_HTML_LONG_ANSWER_EXPORT_ROOT || DEFAULT_EXPORT_ROOT;
+  return process.env.HTMLIFY_EXPORT_ROOT || process.env.PI_HTML_LONG_ANSWER_EXPORT_ROOT || DEFAULT_EXPORT_ROOT;
 }
 
 async function writeHtmlArtifact({ title, bodyHtml, sourceText, mode }) {
@@ -547,15 +549,15 @@ function buildAnnotationLayer(meta) {
   return `${TRUSTED_ANNOTATION_MARKER}
 <style>
   .hla-comment-bar { position: fixed; right: 18px; bottom: 18px; z-index: 99999; display: flex; gap: 8px; flex-wrap: wrap; max-width: min(420px, calc(100vw - 36px)); font: 13px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  .hla-comment-bar button, .hla-comment-panel button { border: 1px solid #b9c4d6; background: #fff; color: #162033; border-radius: 999px; padding: 8px 11px; cursor: pointer; box-shadow: 0 8px 22px -18px rgba(15,23,42,.55); }
+  .hla-comment-bar button, .hla-comment-panel button { border: 1px solid #b9c4d6; background: #fbfdff; color: #162033; border-radius: 999px; padding: 8px 11px; cursor: pointer; box-shadow: 0 8px 22px -18px rgba(15,23,42,.55); }
   .hla-comment-bar button:hover, .hla-comment-panel button:hover { background: #f4f7fb; }
-  .hla-comment-panel { position: fixed; top: 16px; right: 16px; bottom: 72px; z-index: 99998; width: min(390px, calc(100vw - 32px)); overflow: auto; background: #fff; color: #162033; border: 1px solid #cfd7e6; border-radius: 18px; box-shadow: 0 24px 70px -34px rgba(15,23,42,.55); padding: 16px; font: 13px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .hla-comment-panel { position: fixed; top: 16px; right: 16px; bottom: 72px; z-index: 99998; width: min(390px, calc(100vw - 32px)); overflow: auto; background: #fbfdff; color: #162033; border: 1px solid #cfd7e6; border-radius: 18px; box-shadow: 0 24px 70px -34px rgba(15,23,42,.55); padding: 16px; font: 13px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   .hla-comment-panel[hidden] { display: none; }
   .hla-comment-panel h2 { margin: 0 0 10px; font-size: 16px; line-height: 1.2; }
-  .hla-comment-panel textarea { width: 100%; min-height: 90px; resize: vertical; border: 1px solid #cfd7e6; border-radius: 12px; padding: 10px; font: inherit; color: inherit; background: #fff; }
+  .hla-comment-panel textarea { width: 100%; min-height: 90px; resize: vertical; border: 1px solid #cfd7e6; border-radius: 12px; padding: 10px; font: inherit; color: inherit; background: #fbfdff; }
   .hla-comment-list { display: grid; gap: 10px; margin-top: 12px; }
   .hla-comment-card { border: 1px solid #dce3ef; border-radius: 14px; padding: 10px; background: #f8fafc; }
-  .hla-comment-card blockquote { margin: 0 0 8px; padding-left: 9px; border-left: 3px solid #1c7c72; color: #40506a; }
+  .hla-comment-card blockquote { margin: 0 0 8px; padding: 8px 10px; border: 1px solid #c8d7d4; border-radius: 10px; color: #40506a; background: #eef7f5; }
   .hla-highlight { background: #fff0a8; border-radius: 3px; }
   .hla-comment-target { outline: 2px solid #1c7c72; outline-offset: 3px; }
 </style>
@@ -577,7 +579,7 @@ function buildAnnotationLayer(meta) {
 <script>
 (() => {
   const meta = { version: ${COMMENT_BUNDLE_VERSION}, sourceId: ${JSON.stringify(sourceId)}, title: ${JSON.stringify(title)}, exportUrl: location.href };
-  const key = "html-long-answer-comments:" + (meta.sourceId || location.pathname);
+  const key = "htmlify-comments:" + (meta.sourceId || location.pathname);
   const panel = document.getElementById("hla-comment-panel");
   const input = document.getElementById("hla-comment-input");
   const list = document.getElementById("hla-comment-list");
@@ -756,14 +758,14 @@ function parseArgs(rawArgs) {
 
 function parseHtmlCommandInput(text) {
   const source = typeof text === 'string' ? text.trim() : '';
-  if (/^\/html-last-version\s*$/i.test(source)) {
+  if (/^\/(?:html-last-version|htmlify-version)\s*$/i.test(source)) {
     return { command: 'version', args: '' };
   }
 
-  let match = /^\/html-last(?:\s+([\s\S]*))?$/i.exec(source);
+  let match = /^\/(?:html-last|htmlify|htmlify-last)(?:\s+([\s\S]*))?$/i.exec(source);
   if (match) return { command: 'export', args: match[1] || '' };
 
-  match = /^\/html-comments(?:\s+([\s\S]*))?$/i.exec(source);
+  match = /^\/(?:html-comments|htmlify-comments)(?:\s+([\s\S]*))?$/i.exec(source);
   if (match) return { command: 'comments', args: match[1] || '' };
 
   return null;
@@ -823,14 +825,18 @@ function extractHtmlDocument(text) {
 
 function buildRichHtmlPrompt(lastEligible) {
   return [
-    'Transform the following answer into a standalone HTML document.',
+    'Transform the following answer into a standalone, production-quality HTML artifact in the htmlify style.',
     'Return ONLY a single ```html fenced block and nothing else.',
     'Requirements:',
     '- Preserve the factual content and conclusions.',
-    '- Improve structure and visual hierarchy.',
+    '- Prefer visual structure over prose walls: use scoreboards, timelines, matrices, diagrams, tabs, accordions, or side-by-side comparisons when they clarify the work.',
+    '- Treat HTML as an operator surface: make the result scannable, discussable, and actionable.',
+    '- Include the smallest useful artifact shape for the source: brief, deck, implementation map, review packet, report, explainer, or lightweight editor.',
+    '- Improve hierarchy, density, labels, and information scent without adding generic SaaS decoration.',
     '- Use inline CSS only. No external assets, scripts, CDNs, or fonts.',
     '- Make it responsive and print-friendly.',
     '- Add simple inline SVG diagrams only if they materially improve comprehension.',
+    '- Use semantic sections, accessible contrast, stable spacing, and restrained motion-free presentation.',
     '- Do not mention that this was transformed from another answer.',
     '',
     `Title suggestion: ${lastEligible.title}`,
@@ -928,7 +934,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
   }
 
   function notifyCommandError(ctx, error) {
-    notify(ctx, `Long Answer HTML command error: ${error && error.message ? error.message : String(error)} [html-long-answer ${EXTENSION_VERSION}]`, 'error');
+    notify(ctx, `${PRODUCT_NAME} command error: ${error && error.message ? error.message : String(error)} [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'error');
   }
 
   async function isGeminiCliAvailable() {
@@ -943,7 +949,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
   }
 
   async function openArtifact(filePath) {
-    if (process.env.PI_HTML_LONG_ANSWER_SKIP_OPEN === '1') return false;
+    if (process.env.HTMLIFY_SKIP_OPEN === '1' || process.env.PI_HTML_LONG_ANSWER_SKIP_OPEN === '1') return false;
     const command = process.platform === 'darwin'
       ? '/usr/bin/open'
       : process.platform === 'linux'
@@ -984,7 +990,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
   async function maybeOpenArtifact(ctx, filePath, mode) {
     const opened = await openArtifact(filePath);
     if (!opened) return false;
-    notify(ctx, `${mode === 'local' ? 'Opened local HTML export' : 'Opened designed HTML export'} in your default browser. [html-long-answer ${EXTENSION_VERSION}]`, 'info');
+    notify(ctx, `${mode === 'local' ? 'Opened local HTML export' : 'Opened designed HTML export'} in your default browser. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
     return true;
   }
 
@@ -1020,7 +1026,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
       exportedAt: Date.now(),
     };
     await rememberExport(meta);
-    await notify(ctx, `HTML export written to ${filePath}. Use /html-last rich for a more designed HTML pass. [html-long-answer ${EXTENSION_VERSION}]`, 'info');
+    await notify(ctx, `HTML export written to ${filePath}. Use /html-last rich or /htmlify rich for a more designed HTML pass. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
     await maybeOpenArtifact(ctx, filePath, 'local');
     return meta;
   }
@@ -1039,7 +1045,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
       exportedAt: Date.now(),
     };
     await rememberExport(meta);
-    await notify(ctx, `Designed HTML export written to ${filePath}. [html-long-answer ${EXTENSION_VERSION}]`, 'info');
+    await notify(ctx, `Designed HTML export written to ${filePath}. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
     await maybeOpenArtifact(ctx, filePath, 'designed');
     return meta;
   }
@@ -1069,7 +1075,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
       options.shift();
     }
 
-    const prompt = `Long answer detected — ${summary}`;
+    const prompt = `Long answer detected: ${summary}`;
     try {
       const result = await ui.select(prompt, options);
       return normalizeChoice(result, options) || null;
@@ -1101,7 +1107,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
         const html = await runGeminiRichExport(source);
         await exportRichHtmlResult(ctx, source, html);
       } catch (error) {
-        await notify(ctx, `Gemini designed HTML failed: ${error && error.message ? error.message : String(error)}. Falling back to quick local HTML. [html-long-answer ${EXTENSION_VERSION}]`, 'warning');
+        await notify(ctx, `Gemini designed HTML failed: ${error && error.message ? error.message : String(error)}. Falling back to quick local HTML. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'warning');
         await exportLocalHtml(ctx, source, 'local');
       }
       return;
@@ -1172,7 +1178,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
   async function handleChoice(choice, ctx, source) {
     if (choice === 'never') {
       await setOfferMode('never');
-      await notify(ctx, 'Long-answer HTML prompting disabled for this session.', 'info');
+      await notify(ctx, 'htmlify prompting disabled for this session.', 'info');
       return;
     }
     if (choice === 'inline' || !choice) return;
@@ -1203,7 +1209,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
       try {
         await exportRichHtmlResult(ctx, state.pendingRichExport.source, htmlDocument);
       } catch (error) {
-        await notify(ctx, `Richer HTML pass was unsafe or invalid: ${error && error.message ? error.message : String(error)}. Wrote a fallback HTML export instead. [html-long-answer ${EXTENSION_VERSION}]`, 'warning');
+        await notify(ctx, `Richer HTML pass was unsafe or invalid: ${error && error.message ? error.message : String(error)}. Wrote a fallback HTML export instead. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'warning');
         await exportLocalHtml(ctx, state.pendingRichExport.source, 'llm-enhanced-fallback');
       }
     } else {
@@ -1249,7 +1255,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
 
     if (!state.lastEligible || !state.lastEligible.text) {
-      notify(ctx, `No eligible assistant answer has been captured yet in this session. Ask for a long answer first, then run /html-last. [html-long-answer ${EXTENSION_VERSION}]`, 'warning');
+      notify(ctx, `No eligible assistant answer has been captured yet in this session. Ask for a long answer first, then run /html-last or /htmlify. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'warning');
       return;
     }
 
@@ -1297,12 +1303,12 @@ module.exports = function htmlLongAnswerExtension(pi) {
     await appendCustomEntry(COMMENT_ENTRY_TYPE, { ...bundle, importedAt: Date.now() });
     if (typeof pi.sendUserMessage === 'function') {
       await pi.sendUserMessage(prompt, { deliverAs: 'followUp' });
-      notify(ctx, `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [html-long-answer ${EXTENSION_VERSION}]`, 'info');
+      notify(ctx, `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
       return;
     }
     if (typeof pi.sendMessage === 'function') {
       await pi.sendMessage(prompt, { deliverAs: 'followUp', triggerTurn: true });
-      notify(ctx, `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [html-long-answer ${EXTENSION_VERSION}]`, 'info');
+      notify(ctx, `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
       return;
     }
     notify(ctx, prompt, 'info');
@@ -1310,7 +1316,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
 
   if (typeof pi.setLabel === 'function') {
     try {
-      pi.setLabel(`Long Answer HTML ${EXTENSION_VERSION}`);
+      pi.setLabel(`${PRODUCT_NAME} ${EXTENSION_VERSION}`);
     } catch (_) {
       // Some hosts reject action methods during extension loading.
     }
@@ -1330,7 +1336,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
 
       try {
         if (parsedInput.command === 'version') {
-          notify(ctx, `html-long-answer ${EXTENSION_VERSION}`, 'info');
+          notify(ctx, `${PRODUCT_NAME} ${EXTENSION_VERSION}`, 'info');
         } else if (parsedInput.command === 'comments') {
           await importCommentsFromCommand(parsedInput.args, ctx);
         } else {
@@ -1346,36 +1352,48 @@ module.exports = function htmlLongAnswerExtension(pi) {
       try {
         await handleAssistantMessage(event, ctx);
       } catch (error) {
-        await notify(ctx, `Long Answer HTML extension error: ${error && error.message ? error.message : String(error)}`, 'error');
+        await notify(ctx, `${PRODUCT_NAME} extension error: ${error && error.message ? error.message : String(error)}`, 'error');
       }
     });
   }
 
   if (typeof pi.registerCommand === 'function') {
-    pi.registerCommand('html-last', {
+    const exportCommand = {
       description: 'Export the latest eligible assistant answer as HTML. Use `choose`, `gemini`, `pi`, or `local` to force a render path.',
       handler: (args, ctx) => {
         void exportLatestFromCommand(args, ctx).catch((error) => {
           notifyCommandError(ctx, error);
         });
       },
-    });
+    };
 
-    pi.registerCommand('html-comments', {
+    pi.registerCommand('html-last', {
+      ...exportCommand,
+    });
+    pi.registerCommand('htmlify', { ...exportCommand });
+    pi.registerCommand('htmlify-last', { ...exportCommand });
+
+    const commentsCommand = {
       description: 'Import downloaded HTML comments JSON and send the review prompt back to the agent.',
       handler: (args, ctx) => {
         void importCommentsFromCommand(args, ctx).catch((error) => {
           notifyCommandError(ctx, error);
         });
       },
-    });
+    };
 
-    pi.registerCommand('html-last-version', {
-      description: 'Show the loaded Long Answer HTML extension version.',
+    pi.registerCommand('html-comments', { ...commentsCommand });
+    pi.registerCommand('htmlify-comments', { ...commentsCommand });
+
+    const versionCommand = {
+      description: 'Show the loaded htmlify extension version.',
       handler: (_args, ctx) => {
-        notify(ctx, `html-long-answer ${EXTENSION_VERSION}`, 'info');
+        notify(ctx, `${PRODUCT_NAME} ${EXTENSION_VERSION}`, 'info');
       },
-    });
+    };
+
+    pi.registerCommand('html-last-version', { ...versionCommand });
+    pi.registerCommand('htmlify-version', { ...versionCommand });
   }
 };
 
