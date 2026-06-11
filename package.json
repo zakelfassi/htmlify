@@ -2,7 +2,7 @@
   "name": "@zakelfassi/htmlify",
   "version": "0.3.1",
   "private": false,
-  "description": "Turn long agent answers into self-contained, browser-ready HTML artifacts for Pi, OMP, and agentskills-compatible workflows.",
+  "description": "Turn agent answers into self-contained HTML artifacts and presentation decks — operator briefs, review packets, incident timelines, decision briefs, and talks. Zero dependencies, zero build, one file.",
   "license": "Apache-2.0",
   "type": "commonjs",
   "main": "index.js",
@@ -29,13 +29,18 @@
     "type": "git",
     "url": "git+https://github.com/zakelfassi/htmlify.git"
   },
-  "homepage": "https://github.com/zakelfassi/htmlify#readme",
+  "homepage": "https://zakelfassi.github.io/htmlify/",
   "bugs": {
     "url": "https://github.com/zakelfassi/htmlify/issues"
   },
   "keywords": [
     "agentskills",
     "agent-skill",
+    "deckify",
+    "claude-code",
+    "claude-code-plugin",
+    "presentation",
+    "deck",
     "oh-my-pi",
     "omp",
     "pi",
