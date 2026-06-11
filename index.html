@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>htmlify — stdout, made permanent</title>
+  <meta name="description" content="Agent skills that turn long answers into self-contained HTML documents and presentation decks. Zero dependencies, zero build, one file." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='12' y='12' width='40' height='40' fill='%23FAF7F0' stroke='%231C1A15' stroke-width='3'/%3E%3Cline x1='12' y1='27' x2='52' y2='27' stroke='%231C1A15' stroke-width='1.5'/%3E%3Crect x='13.5' y='13.5' width='13' height='12' fill='%23E84B0F'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      color-scheme: light dark;
+      --paper: #faf7f0;
+      --surface: #ffffff;
+      --ink: #1c1a15;
+      --ink-2: #6e6759;
+      --rule: #d9d2c3;
+      --rule-strong: #1c1a15;
+      --signal: #e84b0f;
+      --signal-wash: #fbeae1;
+      --ok: #2c7a52;
+      --code-bg: #211e18;
+      --code-ink: #e8e2d4;
+      --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    [data-theme="dark"] {
+      --paper: #161410;
+      --surface: #1e1b16;
+      --ink: #ede8dc;
+      --ink-2: #a39a88;
+      --rule: #3a352b;
+      --rule-strong: #ede8dc;
+      --signal: #ff6b2c;
+      --signal-wash: #3a2114;
+      --ok: #5bbe8c;
+      --code-bg: #0e0d0a;
+      --code-ink: #d8d2c4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #161410;
+        --surface: #1e1b16;
+        --ink: #ede8dc;
+        --ink-2: #a39a88;
+        --rule: #3a352b;
+        --rule-strong: #ede8dc;
+        --signal: #ff6b2c;
+        --signal-wash: #3a2114;
+        --ok: #5bbe8c;
+        --code-bg: #0e0d0a;
+        --code-ink: #d8d2c4;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 16px/1.6 var(--font-body);
+    }
+    /* crop marks */
+    body::before, body::after, .crop-b::before, .crop-b::after {
+      content: "";
+      position: fixed;
+      width: 14px;
+      height: 14px;
+      border-color: var(--rule);
+      border-style: solid;
+      z-index: 10;
+      pointer-events: none;
+    }
+    body::before { top: 10px; left: 10px; border-width: 1px 0 0 1px; }
+    body::after { top: 10px; right: 10px; border-width: 1px 1px 0 0; }
+    .crop-b::before { bottom: 10px; left: 10px; border-width: 0 0 1px 1px; }
+    .crop-b::after { bottom: 10px; right: 10px; border-width: 0 1px 1px 0; }
+    .mono { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--ink-2); }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+    /* plate header */
+    .plate {
+      border: 2px solid var(--rule-strong);
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: stretch;
+      margin: 36px 0 0;
+    }
+    .plate > div { padding: 10px 16px; border-left: 1px solid var(--rule); display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+    .plate > div:first-child { border-left: 0; }
+    .plate .cell-label { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; color: var(--ink-2); }
+    .plate .cell-value { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; color: var(--ink); }
+    .plate .signal-cell { background: var(--signal); }
+    .plate .signal-cell .cell-label, .plate .signal-cell .cell-value { color: #fff; }
+    .theme-btn {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: none;
+      border: none;
+      border-left: 1px solid var(--rule);
+      color: var(--ink-2);
+      cursor: pointer;
+      padding: 10px 16px;
+    }
+    .theme-btn:hover { color: var(--signal); }
+
+    /* hero */
+    .hero { padding: 72px 0 48px; }
+    h1.display {
+      font-family: var(--font-display);
+      font-size: clamp(40px, 6.5vw, 72px);
+      line-height: 1.02;
+      letter-spacing: -0.015em;
+      margin: 0 0 8px;
+      font-weight: 400;
+    }
+    .hero .underline { display: block; width: 132px; height: 5px; background: var(--signal); margin: 18px 0 26px; }
+    .hero p.lede { font-size: 20px; line-height: 1.55; max-width: 56ch; margin: 0 0 12px; }
+    .hero .lede strong { font-weight: 600; }
+    .stamp-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 22px 0 0; }
+    .stamp {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1.5px solid currentColor;
+      border-radius: 2px;
+      padding: 3px 9px;
+      color: var(--ok);
+    }
+    .stamp.signal { color: var(--signal); }
+    .stamp.ink { color: var(--ink-2); }
+
+    /* install tabs */
+    .install { margin: 40px 0 0; border: 2px solid var(--rule-strong); }
+    .tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--rule); }
+    .tabs button {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: none;
+      border: none;
+      border-right: 1px solid var(--rule);
+      padding: 12px 16px;
+      color: var(--ink-2);
+      cursor: pointer;
+    }
+    .tabs button[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -3px 0 var(--signal); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .codewell { background: var(--code-bg); color: var(--code-ink); position: relative; }
+    .codewell pre {
+      margin: 0;
+      padding: 18px 110px 18px 18px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .codewell .copy {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: none;
+      color: var(--code-ink);
+      border: 1px solid var(--code-ink);
+      border-radius: 2px;
+      padding: 4px 9px;
+      cursor: pointer;
+      opacity: 0.75;
+    }
+    .codewell .copy:hover { opacity: 1; }
+    .panel .note { padding: 10px 18px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-2); }
+    .panel .note a { color: var(--signal); }
+
+    /* sections */
+    section.block { margin: 72px 0 0; }
+    .section-head { border-top: 2px solid var(--rule-strong); padding-top: 10px; margin-bottom: 26px; }
+    .section-head h2 {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: clamp(26px, 3.4vw, 36px);
+      letter-spacing: -0.01em;
+      margin: 6px 0 0;
+    }
+
+    /* how it works */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--rule); }
+    .step { padding: 22px; border-left: 1px solid var(--rule); }
+    .step:first-child { border-left: 0; }
+    .step h3 { font-family: var(--font-display); font-weight: 400; font-size: 21px; margin: 10px 0 8px; }
+    .step p { font-size: 14px; color: var(--ink-2); margin: 0; }
+    .step .mono { color: var(--signal); }
+
+    /* gallery */
+    .gallery { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+    .card {
+      display: block;
+      border-right: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      padding: 20px;
+      text-decoration: none;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    .card:hover { background: var(--surface); }
+    .card:hover h3 { color: var(--signal); }
+    .card .mode {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1.5px solid var(--ink-2);
+      border-radius: 2px;
+      color: var(--ink-2);
+      display: inline-block;
+      padding: 2px 7px;
+      margin-bottom: 12px;
+    }
+    .card .mode.deck { border-color: var(--signal); color: var(--signal); }
+    .card h3 { font-family: var(--font-display); font-weight: 400; font-size: 19px; line-height: 1.2; margin: 0 0 8px; }
+    .card p { font-size: 13.5px; color: var(--ink-2); margin: 0; }
+
+    /* family */
+    .family { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); }
+    .family > div { padding: 26px; }
+    .family > div + div { border-left: 1px solid var(--rule); }
+    .family h3 { font-family: var(--font-display); font-weight: 400; font-size: 26px; margin: 8px 0 12px; }
+    .family ul { margin: 0; padding-left: 18px; font-size: 14.5px; color: var(--ink-2); }
+    .family li { margin-bottom: 6px; }
+    .family li strong { color: var(--ink); font-weight: 600; }
+
+    /* principles */
+    .principles { columns: 2; column-gap: 40px; font-size: 15px; max-width: 100%; }
+    .principles p { break-inside: avoid; margin: 0 0 16px; color: var(--ink-2); }
+    .principles p strong { color: var(--ink); font-weight: 600; }
+
+    footer.plate-footer {
+      margin: 80px 0 48px;
+      border: 2px solid var(--rule-strong);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 18px;
+    }
+    footer a { color: var(--ink); }
+    footer a:hover { color: var(--signal); }
+
+    @media (max-width: 860px) {
+      .steps, .gallery { grid-template-columns: 1fr; }
+      .step { border-left: 0; border-top: 1px solid var(--rule); }
+      .step:first-child { border-top: 0; }
+      .family { grid-template-columns: 1fr; }
+      .family > div + div { border-left: 0; border-top: 1px solid var(--rule); }
+      .principles { columns: 1; }
+      .plate { grid-template-columns: 1fr 1fr; }
+      .plate > div { border-top: 1px solid var(--rule); }
+    }
+    @media print {
+      :root { --paper: #fff; }
+      .theme-btn, .copy { display: none; }
+      @page { margin: 14mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="crop-b"></div>
+  <div class="wrap">
+
+    <header class="plate" aria-label="Plate">
+      <div class="signal-cell">
+        <span class="cell-label">Project</span>
+        <span class="cell-value">HTMLIFY</span>
+      </div>
+      <div>
+        <span class="cell-label">Contents</span>
+        <span class="cell-value">SKILL FAMILY · HTML ARTIFACTS &amp; DECKS</span>
+      </div>
+      <div>
+        <span class="cell-label">License</span>
+        <span class="cell-value">APACHE-2.0</span>
+      </div>
+      <button class="theme-btn" id="theme-toggle" type="button" aria-label="Toggle color scheme">Light / Dark</button>
+    </header>
+
+    <section class="hero">
+      <h1 class="display">stdout, made&nbsp;permanent.</h1>
+      <span class="underline" aria-hidden="true"></span>
+      <p class="lede"><strong>htmlify</strong> is a skill family for coding agents. Instead of answering in walls of markdown, your agent ships <strong>self-contained HTML</strong> — operator briefs, review packets, incident timelines, presentation decks with speaker notes — one file you can open, print, annotate, and keep.</p>
+      <div class="stamp-row">
+        <span class="stamp">SELF-CONTAINED</span>
+        <span class="stamp signal">0 DEPENDENCIES</span>
+        <span class="stamp signal">0 BUILD</span>
+        <span class="stamp ink">1 FILE</span>
+      </div>
+
+      <div class="install" id="install">
+        <div class="tabs" role="tablist" aria-label="Install per agent">
+          <button role="tab" aria-selected="true" data-panel="claude">Claude Code</button>
+          <button role="tab" aria-selected="false" data-panel="codex">Codex</button>
+          <button role="tab" aria-selected="false" data-panel="cursor">Cursor / Windsurf</button>
+          <button role="tab" aria-selected="false" data-panel="aider">Aider / CLI</button>
+          <button role="tab" aria-selected="false" data-panel="pi">Pi / OMP</button>
+        </div>
+        <div class="panel active codewell" id="panel-claude" role="tabpanel">
+          <pre>/plugin marketplace add zakelfassi/htmlify
+/plugin install htmlify@htmlify</pre>
+          <button class="copy" type="button">Copy</button>
+        </div>
+        <div class="panel codewell" id="panel-codex" role="tabpanel">
+          <pre>git clone https://github.com/zakelfassi/htmlify.git ~/.htmlify
+ln -sfn ~/.htmlify/skills/htmlify ~/.codex/skills/htmlify
+ln -sfn ~/.htmlify/skills/deckify ~/.codex/skills/deckify</pre>
+          <button class="copy" type="button">Copy</button>
+        </div>
+        <div class="panel codewell" id="panel-cursor" role="tabpanel">
+          <pre>git clone https://github.com/zakelfassi/htmlify.git ~/.agent-skills/htmlify
+# then point a project rule at:
+#   ~/.agent-skills/htmlify/skills/htmlify/SKILL.md
+#   ~/.agent-skills/htmlify/skills/deckify/SKILL.md</pre>
+          <button class="copy" type="button">Copy</button>
+        </div>
+        <div class="panel codewell" id="panel-aider" role="tabpanel">
+          <pre># pipe any long answer into a designed artifact
+printf '%s' "$LONG_ANSWER" | npx -y @zakelfassi/htmlify htmlify-answer --title "Review"
+# validate any artifact (rich, app, or deck profile)
+npx -y @zakelfassi/htmlify htmlify-answer --validate artifact.html --profile auto</pre>
+          <button class="copy" type="button">Copy</button>
+        </div>
+        <div class="panel codewell" id="panel-pi" role="tabpanel">
+          <pre>pi install npm:@zakelfassi/htmlify
+# then: /htmlify · /html-last · /html-comments</pre>
+          <button class="copy" type="button">Copy</button>
+        </div>
+        <div class="note">This page is itself an htmlify artifact: one HTML file, inline CSS+JS, no external assets. View source to audit everything it does. <a href="https://github.com/zakelfassi/htmlify">Repository →</a></div>
+      </div>
+    </section>
+
+    <section class="block" id="how">
+      <div class="section-head">
+        <span class="mono">1.0 · Method</span>
+        <h2>Evidence in, one file out</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="mono">1.1 · Gather</span>
+          <h3>Evidence first</h3>
+          <p>The skill reads the repo, git state, PRs, CI, logs, and docs before designing anything. Uncertain claims get marked <em>needs verification</em>, not asserted.</p>
+        </div>
+        <div class="step">
+          <span class="mono">1.2 · Author</span>
+          <h3>One HTML file</h3>
+          <p>Inline CSS and JS in the Hardcopy design language: plates, hairlines, stamps, carbon code wells. Document modes from htmlify, deck modes from deckify.</p>
+        </div>
+        <div class="step">
+          <span class="mono">1.3 · Validate</span>
+          <h3>Prove it, open it</h3>
+          <p>The bundled validator checks structure, script safety, external-asset bans, deck contracts, and size — then the artifact opens in your browser.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="gallery">
+      <div class="section-head">
+        <span class="mono">2.0 · Gallery — every artifact below was generated by the skills, about this repository</span>
+        <h2>The repo is its own demo</h2>
+      </div>
+      <div class="gallery">
+        <a class="card" href="examples/htmlify/operator-brief.html">
+          <span class="mode">operator-brief</span>
+          <h3>State of the v1.0.0 launch</h3>
+          <p>Scoreboard, shipped timeline, risks, and on-deck actions for this release. Look for: the plate, stamps, and index rail.</p>
+        </a>
+        <a class="card" href="examples/htmlify/pr-review-packet.html">
+          <span class="mode">pr-review-packet</span>
+          <h3>PR #1 — extension hardening</h3>
+          <p>A real merged PR as a review packet: motivation, diff tour, reviewer checklist. Look for: annotated file tour.</p>
+        </a>
+        <a class="card" href="examples/htmlify/incident-timeline.html">
+          <span class="mode">incident-report</span>
+          <h3>The capture-notification bug</h3>
+          <p>A real bug, from discovery to fix: impact, timeline, root cause, follow-ups. Look for: the discovery→fix timeline.</p>
+        </a>
+        <a class="card" href="examples/htmlify/decision-brief.html">
+          <span class="mode">decision-brief</span>
+          <h3>Monorepo or two repos?</h3>
+          <p>The actual architecture decision behind this release, with options, tradeoffs, and the call. Look for: the decision panel.</p>
+        </a>
+        <a class="card" href="examples/htmlify/implementation-map.html">
+          <span class="mode">implementation-map</span>
+          <h3>How the runtime works</h3>
+          <p>Capture → render → validate → annotate, with the module graph and hot path. Look for: the inline SVG dependency map.</p>
+        </a>
+        <a class="card" href="examples/htmlify/explainer.html">
+          <span class="mode">explainer</span>
+          <h3>When HTML beats markdown</h3>
+          <p>The principles behind the project as a learning artifact: TL;DR, comparison matrix, FAQ. Look for: the comparison matrix.</p>
+        </a>
+        <a class="card" href="examples/htmlify/launch-board.html">
+          <span class="mode">prototype</span>
+          <h3>Launch checklist board</h3>
+          <p>An interactive triage board with status cycling and JSON export — the interactive ceiling of an artifact. Look for: export button.</p>
+        </a>
+        <a class="card" href="examples/deckify/talk-deck.html">
+          <span class="mode deck">talk-deck</span>
+          <h3>stdout, made permanent — the talk</h3>
+          <p>The launch talk as a deck: speaker notes on every slide, run-of-show, keyboard nav. Press → to advance, N for notes.</p>
+        </a>
+        <a class="card" href="examples/deckify/workshop-deck.html">
+          <span class="mode deck">workshop-deck</span>
+          <h3>Authoring agent skills</h3>
+          <p>A teaching deck with exercises, checkpoints, and a printable guide mode. Press G for the guide, then print to PDF.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="block" id="family">
+      <div class="section-head">
+        <span class="mono">3.0 · The family</span>
+        <h2>Two skills, one validated core</h2>
+      </div>
+      <div class="family">
+        <div>
+          <span class="mono">skills/htmlify</span>
+          <h3>htmlify — documents</h3>
+          <ul>
+            <li><strong>10 modes:</strong> operator-brief, build-plan, implementation-map, pr-review-packet, release-brief, incident-report, decision-brief, status-report, explainer, prototype/editor</li>
+            <li>Print CSS for PDF/archival on every shareable artifact</li>
+            <li>Browser-native annotation layer: select text, comment, send back to the agent</li>
+            <li>Validated with <code>--profile rich</code> (or <code>app</code> for interactive artifacts)</li>
+          </ul>
+        </div>
+        <div>
+          <span class="mono">skills/deckify</span>
+          <h3>deckify — decks</h3>
+          <ul>
+            <li><strong>6 modes:</strong> talk-deck, workshop-deck, essay-deck, demo-deck, launch-deck, teaching-guide</li>
+            <li>Speaker notes per slide, run-of-show with timestamps, keyboard navigation</li>
+            <li>Downloadable guide/PDF companion — not a transcript, a handout</li>
+            <li>40–60% visual coverage target; validated with <code>--profile deck</code></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="principles">
+      <div class="section-head">
+        <span class="mono">4.0 · Principles</span>
+        <h2>Why this exists</h2>
+      </div>
+      <div class="principles">
+        <p><strong>HTML beats markdown when the work has shape.</strong> Comparison, architecture, timelines, ownership, review — these are spatial. A wall of markdown flattens them; a designed page restores them.</p>
+        <p><strong>Self-containment is a security posture, not a style.</strong> One file, inline everything, no CDNs, no analytics, no external fonts. The validator enforces it: blocked script sources, no event-handler attributes, no remote assets. What you open is what you can read in view-source.</p>
+        <p><strong>Evidence before design.</strong> Artifacts are built from repo state, git history, CI, and logs — and claims the agent can't verify are stamped <em>needs verification</em> instead of asserted.</p>
+        <p><strong>The terminal stays primary.</strong> Your answer remains in the terminal; the artifact is an explicit export, never a replacement. Hooks only archive answers past a threshold you set.</p>
+      </div>
+    </section>
+
+    <footer class="plate-footer">
+      <span class="mono">HTMLIFY · APACHE-2.0 · ZERO DEPENDENCIES</span>
+      <span class="mono"><a href="https://github.com/zakelfassi/htmlify">GITHUB</a> · <a href="https://www.npmjs.com/package/@zakelfassi/htmlify">NPM</a> · <a href="examples/htmlify/operator-brief.html">GALLERY</a></span>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const stored = localStorage.getItem('htmlify-theme');
+      if (stored) root.setAttribute('data-theme', stored);
+      document.getElementById('theme-toggle').addEventListener('click', () => {
+        const current = root.getAttribute('data-theme') ||
+          (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('htmlify-theme', next);
+      });
+
+      const tabs = Array.from(document.querySelectorAll('.tabs button'));
+      const panels = Array.from(document.querySelectorAll('.panel'));
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabs.forEach((t) => t.setAttribute('aria-selected', String(t === tab)));
+          panels.forEach((p) => p.classList.toggle('active', p.id === 'panel-' + tab.dataset.panel));
+        });
+      });
+
+      document.querySelectorAll('.copy').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const pre = button.parentElement.querySelector('pre');
+          const text = pre.textContent.split('\n').filter((line) => !line.trim().startsWith('#')).join('\n').trim();
+          try {
+            await navigator.clipboard.writeText(text);
+            button.textContent = 'Copied';
+            setTimeout(() => { button.textContent = 'Copy'; }, 1400);
+          } catch {
+            button.textContent = 'Select + copy';
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
