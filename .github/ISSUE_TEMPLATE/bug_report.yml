@@ -1,0 +1,53 @@
+name: Bug report
+description: Something broke — a bad export, a validator miss, a crashed command
+labels: [bug]
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      description: Where did the problem show up?
+      options:
+        - htmlify skill (SKILL.md flow)
+        - deckify skill (SKILL.md flow)
+        - htmlify-answer CLI
+        - --validate CLI
+        - Pi / Oh-My-Pi extension
+        - Claude Code hook / plugin
+        - Generated artifact (HTML output)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+      placeholder: Ran `htmlify-answer --validate deck.html --profile deck` and ...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Smallest input that reproduces it (command, snippet, or a minimal HTML file).
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: e.g. @zakelfassi/htmlify 1.0.0, or a commit SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: e.g. Node 22.4 / macOS 15 / Claude Code 2.x
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Security check
+      options:
+        - label: This is not a security vulnerability (those go to SECURITY.md, not public issues)
+          required: true

@@ -3,6 +3,7 @@
   "version": "0.3.1",
   "private": false,
   "description": "Turn long agent answers into self-contained, browser-ready HTML artifacts for Pi, OMP, and agentskills-compatible workflows.",
+  "license": "Apache-2.0",
   "type": "commonjs",
   "main": "index.js",
   "bin": {
