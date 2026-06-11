@@ -82,13 +82,14 @@ test('package metadata preserves npm Pi and OMP entry contracts', () => {
   assert.ok(packageJson.keywords.includes('pi-extension'));
   assert.ok(packageJson.keywords.includes('agentskills'));
   assert.deepEqual(packageJson.files, [
-    'SKILL.md',
+    'index.js',
+    'src/',
     'bin/',
     'hooks/',
-    'index.js',
-    'README.md',
+    'skills/',
+    '.claude-plugin/',
     'assets/',
-    'references/',
+    'README.md',
   ]);
   assert.ok(packageJson.scripts.test.includes('node --test'));
 

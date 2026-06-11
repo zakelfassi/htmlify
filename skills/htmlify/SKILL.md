@@ -2,8 +2,9 @@
 name: htmlify
 description: Create self-contained HTML artifacts from agent or repo context, including operator briefs, build plans, implementation maps, PR/release packets, incident timelines, decision briefs, reports, explainers, diagrams, prototypes, and lightweight editors. Use when the user asks to turn dense text, code evidence, plans, reviews, or status into browser-ready HTML instead of a markdown wall.
 compatibility: Works in agentskills.io-compatible clients. Optional Pi/OMP extension runtime is in index.js and requires Node 20+.
+license: Apache-2.0
 metadata:
-  version: "0.3.1"
+  version: "0.3.1" # x-release-please-version
   source: "https://github.com/zakelfassi/htmlify"
 ---
 
@@ -30,10 +31,26 @@ Use HTML when the answer needs shape, scanning, comparison, annotation, print/PD
 5. Make it operator useful. The first viewport should reveal the subject, current status, and where attention should go.
 6. Keep copy tight. Labels, numbers, and short evidence-backed statements beat generic prose.
 7. Include print CSS for artifacts intended to share, archive, or export as PDF.
-8. Add keyboard navigation for deck-style artifacts.
+8. Add keyboard navigation for deck-style artifacts. For full presentation decks with speaker notes and run-of-show, use the companion `deckify` skill instead.
 9. Make mobile acceptable, but optimize dense operational artifacts for desktop review.
 10. When an image, screenshot, figure, or thumbnail references a link, article, documentation page, post, paper, dashboard, or source page, attach the source in the visible caption/ref near the image. Prefer a caption anchor such as `Source: <a href="...">Exact source title</a>` or weave the linked title into the caption. Do not leave source URLs only in hidden metadata.
 11. Validate before final response: doctype, standalone `<html>`/`<body>`, no missing local assets, expected sections, source-linked captions for referenced images, and no obvious layout overlap.
+
+## Visual Direction
+
+Default to the **Hardcopy** design system — the document language of engineering plates and datasheets: warm paper field, ink hairlines, serif display headings, mono-uppercase metadata, one international-orange accent, carbon code wells, stamps for status, crop marks, and a plate-style title block. Load [references/hardcopy.md](references/hardcopy.md) for the token block, the seven devices, and print rules before styling any artifact.
+
+When the project supplies `DESIGN.md`, brand tokens, or an established design system, those are authoritative over Hardcopy.
+
+## Validate the Artifact
+
+Before the final response, run the bundled validator on the written file:
+
+```bash
+npx -y @zakelfassi/htmlify htmlify-answer --validate path/to/artifact.html --profile rich
+```
+
+Use `--profile app` for artifacts that legitimately carry inline interactivity (editors, prototypes, boards). From a repo or plugin checkout, use `node <checkout>/bin/htmlify-answer.js` (in Claude Code plugin context: `node "${CLAUDE_PLUGIN_ROOT}/bin/htmlify-answer.js"`). Fix every reported error before responding; report any remaining warnings in the final response. If the validator cannot run in the environment, perform rule 11 manually and say so.
 
 ## HTML Shape
 
@@ -98,6 +115,6 @@ Use these modules when useful:
 
 ## Final Response
 
-Report the HTML file path, artifact mode, evidence sources checked, and validation performed. State any verification not run.
+Report the HTML file path, artifact mode, evidence sources checked, and validation performed (including the validator command and result). State any verification not run.
 
-If using the bundled Pi/OMP runtime, see [README.md](README.md) for `/htmlify` commands and install paths.
+If using the bundled Pi/OMP runtime, see the repository README for `/htmlify` commands and install paths.

@@ -16,13 +16,14 @@
     "typecheck": "tsc --noEmit"
   },
   "files": [
-    "SKILL.md",
+    "index.js",
+    "src/",
     "bin/",
     "hooks/",
-    "index.js",
-    "README.md",
+    "skills/",
+    ".claude-plugin/",
     "assets/",
-    "references/"
+    "README.md"
   ],
   "repository": {
     "type": "git",
