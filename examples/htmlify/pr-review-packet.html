@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PR #1 — Harden HTML export extension · htmlify review packet</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      /* Paper (light) */
+      --paper: #faf7f0;
+      --surface: #ffffff;
+      --ink: #1c1a15;
+      --ink-2: #6e6759;
+      --rule: #d9d2c3;
+      --rule-strong: #1c1a15;
+      --signal: #e84b0f;
+      --signal-wash: #fbeae1;
+      --ok: #2c7a52;
+      --warn: #a87514;
+      --risk: #b5341b;
+      --code-bg: #211e18;
+      --code-ink: #e8e2d4;
+      --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        /* Carbon (dark) */
+        --paper: #161410;
+        --surface: #1e1b16;
+        --ink: #ede8dc;
+        --ink-2: #a39a88;
+        --rule: #3a352b;
+        --rule-strong: #ede8dc;
+        --signal: #ff6b2c;
+        --signal-wash: #3a2114;
+        --ok: #5bbe8c;
+        --warn: #d9a93e;
+        --risk: #e2603f;
+        --code-bg: #0e0d0a;
+        --code-ink: #d8d2c4;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 15.5px/1.6 var(--font-body);
+    }
+    main { max-width: 980px; margin: 0 auto; padding: 44px 28px 72px; }
+    a { color: inherit; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+    a:hover { text-decoration-color: var(--signal); }
+    code { font-family: var(--font-mono); font-size: 0.86em; }
+
+    /* Crop marks */
+    .crop { position: fixed; width: 15px; height: 15px; pointer-events: none; z-index: 50; }
+    .crop::before, .crop::after { content: ""; position: absolute; background: var(--rule); }
+    .crop::before { width: 14px; height: 1px; }
+    .crop::after { width: 1px; height: 14px; }
+    .crop.tl { top: 10px; left: 10px; }
+    .crop.tr { top: 10px; right: 10px; }
+    .crop.bl { bottom: 10px; left: 10px; }
+    .crop.br { bottom: 10px; right: 10px; }
+    .crop.tl::before, .crop.bl::before { left: 0; } .crop.tr::before, .crop.br::before { right: 0; }
+    .crop.tl::before, .crop.tr::before { top: 0; }   .crop.bl::before, .crop.br::before { bottom: 0; }
+    .crop.tl::after, .crop.tr::after { top: 0; }     .crop.bl::after, .crop.br::after { bottom: 0; }
+    .crop.tl::after, .crop.bl::after { left: 0; }    .crop.tr::after, .crop.br::after { right: 0; }
+
+    /* Metadata voice */
+    .eyebrow, .k, .sec-label, .index a, .stamp, .meta-strip, .hash, .delta, .focus, .cap, .footer-plate, th {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .eyebrow { font-size: 11px; color: var(--ink-2); margin: 0 0 10px; }
+
+    /* The plate */
+    .plate { border: 2px solid var(--rule-strong); }
+    .plate-title { padding: 26px 24px 20px; border-bottom: 1px solid var(--rule); }
+    .plate h1 {
+      font-family: var(--font-display);
+      font-size: clamp(34px, 5vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -0.015em;
+      margin: 0 0 10px;
+      font-weight: 600;
+    }
+    .plate .sub { margin: 0; color: var(--ink-2); font-size: 14px; }
+    .plate-meta { display: grid; grid-template-columns: repeat(6, 1fr); }
+    .plate-meta .cell { padding: 10px 12px 9px; border-right: 1px solid var(--rule); min-width: 0; }
+    .plate-meta .cell:last-child { border-right: 0; }
+    .cell .k { display: block; font-size: 10px; color: var(--ink-2); margin-bottom: 3px; }
+    .cell .v { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; overflow-wrap: anywhere; }
+    .cell.mode { background: var(--signal); }
+    .cell.mode .k, .cell.mode .v { color: #ffffff; }
+    @media (prefers-color-scheme: dark) { .cell.mode .k, .cell.mode .v { color: #1c1a15; } }
+
+    /* Index */
+    .index { display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--rule); border-top: 0; }
+    .index a { font-size: 11px; color: var(--ink); text-decoration: none; padding: 8px 12px; border-right: 1px solid var(--rule); }
+    .index a:last-child { border-right: 0; }
+    .index a span { color: var(--ink-2); margin-right: 6px; }
+    .index a:hover { color: var(--signal); }
+
+    /* Sections */
+    section.sec { margin-top: 44px; border-top: 2px solid var(--rule-strong); padding-top: 10px; }
+    .sec-label { font-size: 11px; color: var(--ink-2); }
+    .sec h2 {
+      font-family: var(--font-display);
+      font-size: 26px; line-height: 1.15; letter-spacing: -0.015em;
+      margin: 6px 0 14px; font-weight: 600;
+    }
+    .sec p { max-width: 72ch; }
+
+    /* Stamps */
+    .stamp {
+      display: inline-block; border: 1.5px solid currentColor; border-radius: 2px;
+      padding: 2px 8px; font-size: 11px; background: transparent; white-space: nowrap;
+    }
+    .stamp.ok { color: var(--ok); }
+    .stamp.signal { color: var(--signal); }
+
+    /* Commit tour */
+    .tour { list-style: none; margin: 0; padding: 0; counter-reset: commit; }
+    .tour li {
+      display: grid; grid-template-columns: 110px 1fr 130px; gap: 0 18px;
+      border-top: 1px solid var(--rule); padding: 14px 0 16px;
+    }
+    .tour li:first-child { border-top: 0; }
+    .tour .hash { font-size: 12px; color: var(--ink-2); padding-top: 4px; }
+    .tour .hash::before {
+      counter-increment: commit; content: counter(commit) " · ";
+      color: var(--ink);
+    }
+    .tour h3 { font-family: var(--font-display); font-size: 18px; margin: 0 0 6px; letter-spacing: -0.01em; }
+    .tour p { margin: 0 0 6px; font-size: 14.5px; max-width: 66ch; }
+    .tour .focus { font-size: 10.5px; color: var(--ink-2); margin: 0; }
+    .tour .focus b { color: var(--signal); font-weight: 600; }
+    .tour .delta { font-size: 11px; color: var(--ink-2); text-align: right; padding-top: 4px; }
+
+    /* Tables */
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 4px; font-size: 14px; }
+    th { font-size: 10.5px; color: var(--ink-2); text-align: left; font-weight: 500; padding: 8px 12px 8px 0; border-bottom: 2px solid var(--rule-strong); }
+    td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+    td.path { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+    td.role { width: 28%; }
+
+    /* Carbon wells */
+    .well { background: var(--code-bg); color: var(--code-ink); border-radius: 2px; margin: 16px 0; }
+    .well .meta-strip {
+      display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      font-size: 10.5px; color: #8f8876; padding: 8px 14px;
+      border-bottom: 1px solid #3a352b;
+    }
+    .well pre {
+      margin: 0; padding: 12px 14px 14px;
+      font: 11.5px/1.65 var(--font-mono);
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .well .hunk { color: #8f8876; }
+    .well .del { color: #e98168; }
+    .well .add { color: #7fcfa2; }
+    .cap { display: block; font-size: 10.5px; color: var(--ink-2); margin: -8px 0 18px; }
+
+    /* Checklist */
+    .check td:first-child { width: 90px; }
+    .check td.rule-name { font-weight: 600; width: 30%; }
+
+    /* Verdict */
+    .verdict {
+      border: 2px solid var(--rule-strong); margin-top: 18px;
+      display: grid; grid-template-columns: 200px 1fr;
+    }
+    .verdict .seal {
+      border-right: 1px solid var(--rule); padding: 22px;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+    }
+    .verdict .seal .stamp { font-size: 16px; padding: 6px 14px; border-width: 2px; }
+    .verdict .seal .k { font-size: 10px; color: var(--ink-2); }
+    .verdict .body { padding: 18px 22px 20px; }
+    .verdict .body p { margin: 0 0 10px; font-size: 14.5px; }
+    .verdict ul { margin: 6px 0 0; padding-left: 0; list-style: none; }
+    .verdict ul li {
+      font-family: var(--font-mono); font-size: 12px; color: var(--ink-2);
+      border-top: 1px solid var(--rule); padding: 6px 0;
+    }
+    .verdict ul li::before { content: "✓ "; color: var(--ok); }
+
+    /* Footer plate */
+    .footer-plate {
+      margin-top: 52px; border-top: 2px solid var(--rule-strong);
+      padding-top: 10px; font-size: 10.5px; color: var(--ink-2);
+      display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+
+    @media (max-width: 760px) {
+      .plate-meta, .index { grid-template-columns: repeat(3, 1fr); }
+      .plate-meta .cell:nth-child(3n) { border-right: 0; }
+      .plate-meta .cell { border-top: 1px solid var(--rule); }
+      .plate-meta .cell:nth-child(-n+3) { border-top: 0; }
+      .tour li { grid-template-columns: 1fr; gap: 4px; }
+      .tour .delta { text-align: left; }
+      .verdict { grid-template-columns: 1fr; }
+      .verdict .seal { border-right: 0; border-bottom: 1px solid var(--rule); }
+      td.path { white-space: normal; overflow-wrap: anywhere; }
+    }
+
+    @media print {
+      :root { --paper: #ffffff; }
+      /* crop marks render literally; keep them */
+      .no-print, nav { display: none; }
+      .plate, .verdict, .well { break-inside: avoid; }
+      .well { border: 1px solid var(--rule); }
+      @page { margin: 14mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="crop tl" aria-hidden="true"></div>
+  <div class="crop tr" aria-hidden="true"></div>
+  <div class="crop bl" aria-hidden="true"></div>
+  <div class="crop br" aria-hidden="true"></div>
+
+  <main>
+    <section aria-labelledby="title">
+      <header class="plate" role="group" aria-label="Title block">
+        <div class="plate-title">
+          <p class="eyebrow">PR-Review-Packet · zakelfassi/htmlify · Generated 2026-06-11</p>
+          <h1 id="title">Harden HTML export extension</h1>
+          <p class="sub">PR #1 · <code>s-tier-extension-hardening</code> → <code>main</code> · 4 commits · merge <code>7b9e546</code></p>
+        </div>
+        <div class="plate-meta">
+          <div class="cell mode"><span class="k">Mode</span><span class="v">PR-Review-Packet</span></div>
+          <div class="cell"><span class="k">PR</span><span class="v">#1</span></div>
+          <div class="cell"><span class="k">Merged</span><span class="v">2026-04-25</span></div>
+          <div class="cell"><span class="k">Delta</span><span class="v">+553 −87</span></div>
+          <div class="cell"><span class="k">Source</span><span class="v"><a href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a></span></div>
+          <div class="cell"><span class="k">Generator</span><span class="v">htmlify 0.3.1</span></div>
+        </div>
+      </header>
+      <nav class="index" aria-label="Index">
+        <a href="#s1"><span>1.0</span>Motivation</a>
+        <a href="#s2"><span>2.0</span>Review tour</a>
+        <a href="#s3"><span>3.0</span>File tour</a>
+        <a href="#s4"><span>4.0</span>Diff excerpts</a>
+        <a href="#s5"><span>5.0</span>Checklist</a>
+        <a href="#s6"><span>6.0</span>Verdict</a>
+      </nav>
+    </section>
+
+    <section class="sec" id="s1" aria-labelledby="h-s1">
+      <p class="sec-label">1.0 · Motivation</p>
+      <h2 id="h-s1">Untrusted model HTML crosses a trust boundary</h2>
+      <p>
+        The extension takes model-generated “rich” HTML, writes it to disk, and opens it in the
+        user's default browser. That output is untrusted: a model can be prompted (or simply
+        hallucinate) into emitting active content — script and embed tags, inline event handlers,
+        <code>javascript:</code> URLs, meta-refresh redirects, or asset references that phone out to
+        external hosts the moment the file opens. Before this PR, the rich-export path trusted the
+        model's document as-is.
+      </p>
+      <p>
+        This PR inserts a validation gate <em>before any write or open</em>: size caps
+        (512&nbsp;KB / 2,500 tags), a blocked-tag list, and pattern checks for every known
+        active-content vector. It also adds the test suite and CI that keep those rules honest, and
+        prepares the package for npm publishing. Review follow-ups during the PR closed three
+        real bypasses: <code>srcset</code>, CSS <code>@import</code>, and SVG external hrefs.
+      </p>
+    </section>
+
+    <section class="sec" id="s2" aria-labelledby="h-s2">
+      <p class="sec-label">2.0 · Review tour — read the commits in order</p>
+      <h2 id="h-s2">Four commits, narrowing from gate to bypasses</h2>
+      <ol class="tour">
+        <li>
+          <div class="hash">f5fcac7</div>
+          <div>
+            <h3>Harden HTML export extension</h3>
+            <p>The substance. Introduces the validation constants and the reject-before-write gate;
+               makes the export root overridable via env var; switches process opening from shell
+               string to <code>spawn</code>; adds minimal CI and a 216-line <code>node:test</code> suite.</p>
+            <p class="focus"><b>Review focus</b> · the blocked-pattern regexes and the accept/reject fixtures that pin them</p>
+          </div>
+          <div class="delta">+521 −86 · 7 files</div>
+        </li>
+        <li>
+          <div class="hash">ff59d70</div>
+          <div>
+            <h3>Prepare npm package publishing</h3>
+            <p>Publish metadata in <code>package.json</code> (name, files allowlist, engines),
+               README install guidance for Pi/OMP, and test adjustments to match the packaged entry.</p>
+            <p class="focus"><b>Review focus</b> · the files allowlist — nothing private ships in the tarball</p>
+          </div>
+          <div class="delta">+27 −7 · 3 files</div>
+        </li>
+        <li>
+          <div class="hash">c754578</div>
+          <div>
+            <h3>Address PR review hardening</h3>
+            <p>Closes review findings: <code>srcset</code> could still reference external images and
+               CSS <code>@import</code> could still pull remote stylesheets — both regexes widened.
+               Also replaces a loose <code>ctx.hasUI</code> flag with a real capability check
+               (<code>hasSelectableUi</code>) before offering the export-mode picker.</p>
+            <p class="focus"><b>Review focus</b> · excerpt A below — each bypass gains a rejection fixture</p>
+          </div>
+          <div class="delta">+12 −3 · 2 files</div>
+        </li>
+        <li>
+          <div class="hash">8bb6989</div>
+          <div>
+            <h3>Block SVG external asset hrefs</h3>
+            <p>The last bypass: SVG <code>image</code>, <code>use</code>, and <code>feImage</code>
+               elements fetch via <code>href</code>/<code>xlink:href</code>, which the asset regex
+               (keyed to <code>src</code>/<code>poster</code>/<code>srcset</code>) never inspected.
+               One regex extension, two hostile fixtures.</p>
+            <p class="focus"><b>Review focus</b> · excerpt B below — the third regex alternative</p>
+          </div>
+          <div class="delta">+3 −1 · 2 files</div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="sec" id="s3" aria-labelledby="h-s3">
+      <p class="sec-label">3.0 · File tour — 7 files touched</p>
+      <h2 id="h-s3">Where the +553 −87 landed</h2>
+      <table>
+        <thead>
+          <tr><th>File</th><th>What changed</th><th>Why it matters</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="path">.github/workflows/ci.yml</td>
+            <td class="role">New, +28. PNPM install, syntax checks, full test run on push and PR.</td>
+            <td>The validation rules are regex-shaped and regression-prone; every future change now runs the hostile fixtures.</td>
+          </tr>
+          <tr>
+            <td class="path">.gitignore</td>
+            <td class="role">+1, ignores <code>node_modules</code>.</td>
+            <td>Keeps the repo install-clean once dev dependencies arrive with the test tooling.</td>
+          </tr>
+          <tr>
+            <td class="path">README.md</td>
+            <td class="role">Reworked (~95 lines). Pi/OMP install paths, export modes, npm usage.</td>
+            <td>Documents the hardened export contract users actually get — including the local-export default.</td>
+          </tr>
+          <tr>
+            <td class="path">index.js</td>
+            <td class="role">+248 first commit, then review fixes. Validation constants, reject-before-write gate, env-overridable export root, capability-checked UI picker.</td>
+            <td>This file <em>is</em> the security boundary; everything else in the PR exists to protect or prove it.</td>
+          </tr>
+          <tr>
+            <td class="path">package.json</td>
+            <td class="role">Publish metadata, files allowlist, engines, PNPM test script.</td>
+            <td>Makes the extension installable from npm without shipping repo-private files.</td>
+          </tr>
+          <tr>
+            <td class="path">pnpm-lock.yaml</td>
+            <td class="role">+5, lockfile for the new dev toolchain.</td>
+            <td>CI runs are reproducible; a drifting transitive dep can't silently change test results.</td>
+          </tr>
+          <tr>
+            <td class="path">test/extension.test.js</td>
+            <td class="role">New, +216 then +13 across review commits. <code>node:test</code> suite.</td>
+            <td>Every blocking rule has at least one hostile fixture; the review bypasses each landed with a failing-first test.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="sec" id="s4" aria-labelledby="h-s4">
+      <p class="sec-label">4.0 · Diff excerpts — real hunks, trimmed</p>
+      <h2 id="h-s4">The two bypass-closing changes</h2>
+
+      <div class="well">
+        <div class="meta-strip"><span>Excerpt A · index.js · c754578 — close srcset + @import bypasses</span><span>diff</span></div>
+        <pre><span class="hunk">@@ -23,8 +23,8 @@</span>
+<span class="del">-const EXTERNAL_ASSET_ATTR = /\s(?:src|poster)\s*=\s*(['\"]?)\s*(?:https?:)?\/\//i;</span>
+<span class="del">-const EXTERNAL_CSS_URL = /url\(\s*(['\"]?)\s*(?:https?:)?\/\//i;</span>
+<span class="add">+const EXTERNAL_ASSET_ATTR = /\s(?:(?:src|poster)\s*=\s*(['\"]?)\s*(?:https?:)?\/\/|srcset\s*=\s*(['\"]?)[^'\"&gt;]*(?:https?:)?\/\/)/i;</span>
+<span class="add">+const EXTERNAL_CSS_URL = /(?:url\(\s*(['\"]?)\s*(?:https?:)?\/\/|@import\s+(?:url\(\s*)?(['\"]?)\s*(?:https?:)?\/\/)/i;</span></pre>
+      </div>
+      <span class="cap">Fig A · before, only bare src/poster attributes and url() values were inspected; responsive image sets and stylesheet imports slipped through.</span>
+
+      <div class="well">
+        <div class="meta-strip"><span>Excerpt B · index.js + test/extension.test.js · 8bb6989 — block SVG external hrefs</span><span>diff</span></div>
+        <pre><span class="hunk">@@ -23,7 +23,7 @@ index.js</span>
+<span class="del">-const EXTERNAL_ASSET_ATTR = /\s(?:(?:src|poster)\s*=\s*(['\"]?)\s*(?:https?:)?\/\/|srcset\s*=\s*(['\"]?)[^'\"&gt;]*(?:https?:)?\/\/)/i;</span>
+<span class="add">+const EXTERNAL_ASSET_ATTR = /(?:\s(?:src|poster)\s*=\s*(['\"]?)\s*(?:https?:)?\/\/|\ssrcset\s*=\s*(['\"]?)[^'\"&gt;]*(?:https?:)?\/\/|&lt;\s*(?:image|use|feimage)\b[^&gt;]*\s(?:href|xlink:href)\s*=\s*(['\"]?)\s*(?:https?:)?\/\/)/i;</span>
+
+<span class="hunk">@@ -169,6 +169,8 @@ test/extension.test.js · rich validation rejects dangerous or over-large HTML</span>
+<span class="add">+    richDocument('&lt;svg&gt;&lt;image href="https://example.com/a.png" /&gt;&lt;/svg&gt;'),</span>
+<span class="add">+    richDocument('&lt;svg&gt;&lt;use xlink:href="https://example.com/s.svg#icon" /&gt;&lt;/svg&gt;'),</span></pre>
+      </div>
+      <span class="cap">Fig B · the third regex alternative inspects SVG fetching elements; both new fixtures must be rejected for the suite to pass.</span>
+    </section>
+
+    <section class="sec" id="s5" aria-labelledby="h-s5">
+      <p class="sec-label">5.0 · Reviewer checklist — validation coverage</p>
+      <h2 id="h-s5">Every active-content vector, with a fixture behind it</h2>
+      <table class="check">
+        <thead>
+          <tr><th>Status</th><th>Rule</th><th>Evidence</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="stamp ok">Pass</span></td>
+            <td class="rule-name">Blocked tags</td>
+            <td>script, iframe, object, embed, link, base, and all form controls rejected; closing-tag and whitespace variants covered.</td>
+          </tr>
+          <tr>
+            <td><span class="stamp ok">Pass</span></td>
+            <td class="rule-name">Meta refresh</td>
+            <td>http-equiv refresh redirects rejected in head or body, quoted or bare.</td>
+          </tr>
+          <tr>
+            <td><span class="stamp ok">Pass</span></td>
+            <td class="rule-name">Event handlers</td>
+            <td>Any inline on*-attribute rejects the document outright.</td>
+          </tr>
+          <tr>
+            <td><span class="stamp ok">Pass</span></td>
+            <td class="rule-name"><code>javascript:</code> URLs</td>
+            <td>Checked across href, src, xlink:href, action, and formaction attributes.</td>
+          </tr>
+          <tr>
+            <td><span class="stamp ok">Pass</span></td>
+            <td class="rule-name">External assets</td>
+            <td>src/poster, srcset (c754578), CSS url() and @import (c754578) all reject http, https, and protocol-relative URLs.</td>
+          </tr>
+          <tr>
+            <td><span class="stamp ok">Pass</span></td>
+            <td class="rule-name">SVG external hrefs</td>
+            <td>image, use, and feImage href / xlink:href blocked (8bb6989) — the last reviewed bypass.</td>
+          </tr>
+          <tr>
+            <td><span class="stamp ok">Pass</span></td>
+            <td class="rule-name">Tests added</td>
+            <td>New <code>node:test</code> suite (+222 lines total); every rule above has at least one hostile rejection fixture, run in CI on every PR.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="sec" id="s6" aria-labelledby="h-s6">
+      <p class="sec-label">6.0 · Verdict</p>
+      <h2 id="h-s6">Disposition</h2>
+      <div class="verdict">
+        <div class="seal">
+          <span class="stamp ok">Merged</span>
+          <span class="k">2026-04-25 · 05:07 UTC</span>
+          <span class="k">Merge 7b9e546 · +553 −87</span>
+        </div>
+        <div class="body">
+          <p>
+            Merged to <code>main</code> after two review rounds; both rounds produced real bypass
+            fixes (c754578, 8bb6989) rather than cosmetics, each landing with rejection fixtures.
+            Verification recorded on the PR:
+          </p>
+          <ul>
+            <li>pnpm test</li>
+            <li>node --check index.js · node --check test/extension.test.js</li>
+            <li>pi -e ./index.js --offline --no-tools -p "/html-last" — completed, known model-pattern warning only</li>
+            <li>omp -e ./index.js --offline --no-tools -p "/html-last"</li>
+            <li>merge commit SSH-signed and locally verified against an allowed-signers file</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer-plate">
+      <span>htmlify · PR-Review-Packet · PR #1</span>
+      <span>Evidence: gh pr view · git log · git show 7b9e546 f5fcac7 ff59d70 c754578 8bb6989</span>
+      <span><a href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a></span>
+    </footer>
+  </main>
+</body>
+</html>

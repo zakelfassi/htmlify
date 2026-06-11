@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>stdout, made permanent — the case for HTML artifacts</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper: #faf7f0;
+  --surface: #ffffff;
+  --ink: #1c1a15;
+  --ink-2: #6e6759;
+  --rule: #d9d2c3;
+  --rule-strong: #1c1a15;
+  --signal: #e84b0f;
+  --signal-wash: #fbeae1;
+  --ok: #2c7a52;
+  --warn: #a87514;
+  --risk: #b5341b;
+  --code-bg: #211e18;
+  --code-ink: #e8e2d4;
+  --carbon-rule: #3a352b;
+  --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161410;
+    --surface: #1e1b16;
+    --ink: #ede8dc;
+    --ink-2: #a39a88;
+    --rule: #3a352b;
+    --rule-strong: #ede8dc;
+    --signal: #ff6b2c;
+    --signal-wash: #3a2114;
+    --ok: #5bbe8c;
+    --warn: #d9a93e;
+    --risk: #e2603f;
+    --code-bg: #0e0d0a;
+    --code-ink: #d8d2c4;
+    --carbon-rule: #464033;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Crop marks */
+body::before, body::after {
+  content: "";
+  position: fixed;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  z-index: 60;
+}
+body::before { top: 10px; left: 10px; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+body::after { bottom: 10px; right: 10px; border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+
+/* Presenter chrome: carbon */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-bottom: 1px solid var(--carbon-rule);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  z-index: 50;
+}
+.topbar .deck-title { color: var(--code-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar .spacer { flex: 1; }
+.topbar .progress { color: var(--code-ink); }
+.topbar button {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--code-ink);
+  background: transparent;
+  border: 1px solid var(--carbon-rule);
+  border-radius: 2px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.topbar button:hover { border-color: var(--code-ink); }
+
+/* Deck shell */
+.deck-shell {
+  position: fixed;
+  inset: 46px 0 0 0;
+  overflow: hidden;
+}
+.slide {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  padding: clamp(22px, 4.5vh, 56px) clamp(26px, 6vw, 88px) clamp(14px, 2.5vh, 28px);
+  overflow: auto;
+}
+.slide.active { display: flex; }
+.slide-body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 14px;
+}
+.eyebrow .num { color: var(--ink-2); margin-right: 10px; }
+h1, h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+  line-height: 1.08;
+  font-weight: 600;
+  max-width: 24ch;
+}
+h1 { font-size: clamp(38px, 5.6vw, 64px); }
+h2 { font-size: clamp(28px, 4.2vw, 48px); margin-bottom: clamp(14px, 3vh, 28px); }
+.kicker {
+  font-size: clamp(16px, 1.6vw, 20px);
+  color: var(--ink-2);
+  max-width: 58ch;
+  margin-top: 12px;
+}
+.emphasis-rule { border: 0; border-top: 3px solid var(--signal); width: 72px; margin: 18px 0; }
+
+p.lede { font-size: clamp(16px, 1.7vw, 21px); max-width: 56ch; }
+.measure { max-width: 62ch; }
+
+/* The plate footer (compressed title block) */
+.plate {
+  display: flex;
+  align-items: stretch;
+  margin-top: clamp(12px, 2.5vh, 22px);
+  border: 2px solid var(--rule-strong);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.plate span { padding: 4px 12px; border-right: 1px solid var(--rule); color: var(--ink-2); }
+.plate span:last-child { border-right: 0; flex: 1; text-align: right; }
+.plate .mode { background: var(--signal); color: #ffffff; }
+@media (prefers-color-scheme: dark) { .plate .mode { color: #1c1a15; } }
+
+/* Mini plate (title slide) */
+.titleplate {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 2px solid var(--rule-strong);
+  margin-top: clamp(20px, 4vh, 36px);
+  max-width: 760px;
+}
+.titleplate div { padding: 8px 12px; border-right: 1px solid var(--rule); }
+.titleplate div:last-child { border-right: 0; }
+.titleplate dt {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2);
+}
+.titleplate dd { font-family: var(--font-mono); font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
+.titleplate .modecell { background: var(--signal); }
+.titleplate .modecell dt, .titleplate .modecell dd { color: #ffffff; }
+@media (prefers-color-scheme: dark) { .titleplate .modecell dt, .titleplate .modecell dd { color: #1c1a15; } }
+
+/* Carbon wells */
+.well {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: clamp(12px, 1.25vw, 14px);
+  line-height: 1.7;
+  margin: 10px 0;
+  overflow: hidden;
+}
+.well .well-meta {
+  display: block;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--carbon-rule);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8d8472;
+}
+.well pre { padding: 12px 14px; overflow-x: auto; white-space: pre; }
+.fade-9 { opacity: 0.10; } .fade-8 { opacity: 0.18; } .fade-7 { opacity: 0.28; }
+.fade-6 { opacity: 0.38; } .fade-5 { opacity: 0.50; } .fade-4 { opacity: 0.64; }
+.fade-3 { opacity: 0.78; } .fade-2 { opacity: 0.90; }
+
+/* Cells, tables, stamps */
+.cellgrid { display: grid; gap: 0; border: 1px solid var(--rule); }
+.cellgrid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cellgrid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cell { padding: 14px 18px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.cell:last-child, .cellgrid.cols-2 .cell:nth-child(2n), .cellgrid.cols-3 .cell:nth-child(3n) { border-right: 0; }
+.cell h3 {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2); margin-bottom: 6px; font-weight: 600;
+}
+.cell p { font-size: clamp(13px, 1.35vw, 15px); }
+.cell ul { list-style: none; font-size: clamp(13px, 1.3vw, 15px); }
+.cell li { padding: 3px 0; border-bottom: 1px solid var(--rule); }
+.cell li:last-child { border-bottom: 0; }
+.cell li code, td code, p code, li code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--signal-wash); padding: 0 4px; border-radius: 2px;
+}
+table { border-collapse: collapse; width: 100%; font-size: clamp(12px, 1.3vw, 15px); }
+th {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-2); text-align: left; padding: 6px 12px; border-bottom: 2px solid var(--rule-strong);
+  font-weight: 600;
+}
+td { padding: 6px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td.mono, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+.stamp {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1.5px solid currentColor; border-radius: 2px; padding: 2px 8px;
+}
+.stamp.ok { color: var(--ok); }
+.stamp.warn { color: var(--warn); }
+.stamp.risk { color: var(--risk); }
+.stamp.signal { color: var(--signal); }
+
+/* Figures */
+figure { margin: 8px 0; }
+figure svg { width: 100%; height: auto; display: block; }
+figcaption {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2); margin-top: 8px;
+}
+figcaption a { color: var(--ink-2); }
+
+/* Pending visual slot */
+.pending-visual {
+  border: 1px dashed var(--rule);
+  border-radius: 2px;
+  padding: clamp(16px, 3vh, 28px) clamp(18px, 3vw, 32px);
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--surface);
+}
+.pending-visual .pv-meta {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2);
+}
+
+/* Two-column slide bodies */
+.split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(18px, 3vw, 44px); align-items: center; }
+@media (max-width: 860px) { .split { grid-template-columns: 1fr; } h1, h2 { max-width: none; } }
+
+/* Speaker notes: hidden on the slide, mirrored into the panel */
+.notes { display: none; }
+.notes-panel {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  max-height: 32vh;
+  overflow: auto;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-top: 2px solid var(--signal);
+  padding: 12px 22px 16px;
+  z-index: 55;
+}
+.notes-panel .np-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #8d8472; margin-bottom: 6px;
+}
+.notes-panel .np-body { font-size: 14px; line-height: 1.65; max-width: 90ch; }
+
+a { color: inherit; }
+.cta-link { font-family: var(--font-mono); font-size: clamp(15px, 1.8vw, 20px); color: var(--signal); text-decoration-thickness: 1px; }
+
+ul.check { list-style: none; max-width: 60ch; }
+ul.check li { padding: 8px 0 8px 30px; border-bottom: 1px solid var(--rule); position: relative; font-size: clamp(14px, 1.5vw, 17px); }
+ul.check li::before {
+  content: ""; position: absolute; left: 4px; top: 14px;
+  width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 2px;
+}
+
+/* Print: one slide per page, hide chrome */
+@media print {
+  :root { --paper: #ffffff; }
+  .topbar, .notes-panel { display: none; }
+  body::before, body::after { display: none; }
+  .deck-shell { position: static; inset: auto; overflow: visible; }
+  .slide { display: flex; position: static; inset: auto; overflow: visible; break-after: page; page-break-after: always; min-height: 92vh; }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .well { border: 1px solid var(--rule); }
+  .plate { break-inside: avoid; }
+  @page { margin: 14mm; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="deck-title">stdout, made permanent</span>
+  <span class="spacer"></span>
+  <button type="button" id="prev-slide" aria-label="Previous slide">Prev</button>
+  <button type="button" id="next-slide" aria-label="Next slide">Next</button>
+  <span class="progress" id="progress">1 / 14</span>
+  <button type="button" id="toggle-notes" aria-pressed="false">Notes (N)</button>
+</header>
+
+<main class="deck-shell">
+
+  <!-- 01 · TITLE -->
+  <section class="slide active" data-title="Title">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">1.0</span>Launch talk · 15 min · for developers who run coding agents</p>
+      <h1>stdout, made permanent</h1>
+      <p class="kicker">The case for HTML artifacts: when an agent's answer has shape, give it a document — one self-contained file that opens anywhere and lives forever.</p>
+      <dl class="titleplate">
+        <div class="modecell"><dt>Mode</dt><dd>TALK-DECK</dd></div>
+        <div><dt>Source</dt><dd>github.com/zakelfassi/htmlify</dd></div>
+        <div><dt>Date</dt><dd>2026-06-11</dd></div>
+        <div><dt>Runtime</dt><dd>~15:00</dd></div>
+      </dl>
+    </div>
+    <footer class="plate"><span>Plate 01 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Welcome. Frame the room in one sentence: everyone here gets long, careful answers out of coding agents and then loses them. This talk argues for a third output channel besides stdout and the diff: the artifact — a single validated HTML file. Promise the arc: problem, mental model, anatomy, security, the annotation loop, a live demo, and a one-command install. Keep this slide under 45 seconds.</aside>
+  </section>
+
+  <!-- 02 · COLD OPEN -->
+  <section class="slide" data-title="Cold open">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">2.0</span>Cold open</p>
+      <h2>You asked a good question. The answer is already gone.</h2>
+      <div class="well">
+        <span class="well-meta">agent session · scrollback · 14,200 tokens ago</span>
+        <pre><span class="fade-9">## Comparison: queue vs. cron vs. event-driven rebuild</span>
+<span class="fade-8">### Option A — durable queue</span>
+<span class="fade-7">| Option | Latency | Failure mode | Ops cost |</span>
+<span class="fade-6">|--------|---------|--------------|----------|</span>
+<span class="fade-5">| Queue  | ~2s     | redelivery   | medium   |</span>
+<span class="fade-4">| Cron   | ~60s    | silent skip  | low      |</span>
+<span class="fade-3">- Tradeoff 14 of 23: backpressure vs. simplicity...</span>
+<span class="fade-2">- See also the migration plan in section 6, which...</span>
+### Rollback strategy (do not lose this part)
+$ █</pre>
+      </div>
+    </div>
+    <footer class="plate"><span>Plate 02 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Read the bottom line aloud, then scroll your eyes up the fading lines. This is a real shape of session: a 23-tradeoff comparison rendered as pipe tables, already half out of the scrollback buffer. The one part labeled "do not lose this" is the part you will lose. Let the slide sit for a beat before advancing — the fade IS the argument.</aside>
+  </section>
+
+  <!-- 03 · THE PROBLEM -->
+  <section class="slide" data-title="The problem">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">3.0</span>The problem</p>
+      <h2>Terminal answers fail twice</h2>
+      <div class="cellgrid cols-2">
+        <div class="cell">
+          <h3>Ephemeral</h3>
+          <ul>
+            <li>Scrollback is a buffer, not a record</li>
+            <li>Close the tab, lose the analysis</li>
+            <li>Context compaction eats the middle of long sessions</li>
+            <li>Nothing to send to a teammate or a meeting</li>
+          </ul>
+        </div>
+        <div class="cell">
+          <h3>Unreadable at length</h3>
+          <ul>
+            <li>Comparisons become pipe-table ASCII art</li>
+            <li>Architecture has no spatial layout in a stream</li>
+            <li>No side-by-side, no jump links, no collapse</li>
+            <li>2,000-word markdown is a wall, not a document</li>
+          </ul>
+        </div>
+      </div>
+      <p class="kicker">Short answers are fine in the terminal. The failure starts exactly when the answer becomes worth keeping.</p>
+    </div>
+    <footer class="plate"><span>Plate 03 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Two distinct failures, and people usually only name the first. Ephemerality is obvious — scrollback dies. The subtler one is that markdown stops working as a reading surface at length: a six-option comparison or an incident timeline has a SHAPE, and a token stream flattens it. Punchline: the better the answer, the worse the medium fits.</aside>
+  </section>
+
+  <!-- 04 · THE THESIS -->
+  <section class="slide" data-title="The thesis">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">4.0</span>The thesis</p>
+      <h1 style="max-width: 22ch;">Answers with shape deserve a document.</h1>
+      <hr class="emphasis-rule" />
+      <p class="lede">If the reader needs to compare, navigate, review, archive, or hand the answer to someone else — it should be one self-contained HTML file, not a scroll of markdown. The browser is the most widely deployed document reader on earth, and it is already on your machine.</p>
+    </div>
+    <footer class="plate"><span>Plate 04 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">This is the one-sentence takeaway; say it twice. "Shape" is the operative word — comparative, spatial, navigable, reviewable. Pre-empt the objection: this is not "make everything a webapp." No server, no build step, no framework. One file, file:// protocol, double-click. The terminal keeps everything that is short and linear; documents get the rest.</aside>
+  </section>
+
+  <!-- 05 · MENTAL MODEL -->
+  <section class="slide" data-title="Mental model">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">5.0</span>Mental model</p>
+      <h2>Evidence → author → validate. One file out.</h2>
+      <figure>
+        <svg viewBox="0 0 960 280" role="img" aria-label="Pipeline diagram: evidence feeds an authoring step, which feeds a validation step, which emits one self-contained HTML artifact">
+          <g fill="none" stroke="var(--ink)" stroke-width="1.5">
+            <rect x="20" y="70" width="200" height="120" />
+            <rect x="300" y="70" width="200" height="120" />
+            <rect x="580" y="70" width="200" height="120" />
+          </g>
+          <g fill="none" stroke="var(--rule)" stroke-width="1">
+            <line x1="20" y1="106" x2="220" y2="106" />
+            <line x1="300" y1="106" x2="500" y2="106" />
+            <line x1="580" y1="106" x2="780" y2="106" />
+          </g>
+          <g font-family="ui-monospace, Menlo, monospace" font-size="13" letter-spacing="1" fill="var(--ink)">
+            <text x="36" y="94">1 · EVIDENCE</text>
+            <text x="316" y="94">2 · AUTHOR</text>
+            <text x="596" y="94">3 · VALIDATE</text>
+          </g>
+          <g font-family="system-ui, sans-serif" font-size="13" fill="var(--ink-2)">
+            <text x="36" y="132">repo · diff · logs</text>
+            <text x="36" y="152">docs · CI · prior answer</text>
+            <text x="36" y="172">read before designing</text>
+            <text x="316" y="132">one HTML file</text>
+            <text x="316" y="152">inline CSS + JS</text>
+            <text x="316" y="172">visual before verbose</text>
+            <text x="596" y="132">profile: rich | app | deck</text>
+            <text x="596" y="152">structure · safety · size</text>
+            <text x="596" y="172">0 errors or no ship</text>
+          </g>
+          <g stroke="var(--ink)" stroke-width="1.5" fill="var(--ink)">
+            <line x1="220" y1="130" x2="292" y2="130" />
+            <path d="M292 130 l-10 -5 v10 z" />
+            <line x1="500" y1="130" x2="572" y2="130" />
+            <path d="M572 130 l-10 -5 v10 z" />
+          </g>
+          <g stroke="var(--signal)" stroke-width="2" fill="var(--signal)">
+            <line x1="780" y1="130" x2="850" y2="130" />
+            <path d="M850 130 l-11 -5.5 v11 z" />
+          </g>
+          <g font-family="ui-monospace, Menlo, monospace" font-size="13" fill="var(--signal)">
+            <text x="858" y="122">answer</text>
+            <text x="858" y="140">.html</text>
+          </g>
+          <text x="20" y="240" font-family="ui-monospace, Menlo, monospace" font-size="11" letter-spacing="1" fill="var(--ink-2)">OPENS ANYWHERE · NO SERVER · NO BUILD · LIVES IN THE REPO OR THE EXPORT DIR</text>
+        </svg>
+        <figcaption>Fig 1 · The htmlify pipeline · Source: skills/htmlify/SKILL.md operating rules</figcaption>
+      </figure>
+    </div>
+    <footer class="plate"><span>Plate 05 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Three verbs, in order, no skipping. Evidence first: the skill reads the repo, diffs, logs, and docs before designing anything — artifacts assert things, so claims need receipts. Author: exactly one file, all CSS and JS inline. Validate: a real validator with profiles, and zero errors is the bar for shipping — same posture as tests before merge. The orange arrow is the only product: a file.</aside>
+  </section>
+
+  <!-- 06 · PLATE ANATOMY -->
+  <section class="slide" data-title="Anatomy of an artifact">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">6.0</span>What an artifact is</p>
+      <h2>Anatomy of a Hardcopy document</h2>
+      <figure>
+        <svg viewBox="0 0 960 360" role="img" aria-label="Labeled diagram of a Hardcopy document: crop marks, title-block plate, serif headline, body measure, carbon code well, status stamp, and plate footer">
+          <!-- page -->
+          <rect x="60" y="18" width="430" height="324" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5" />
+          <!-- crop marks -->
+          <g stroke="var(--ink-2)" stroke-width="1">
+            <line x1="48" y1="26" x2="58" y2="26" /><line x1="68" y1="6" x2="68" y2="16" />
+            <line x1="492" y1="334" x2="502" y2="334" /><line x1="482" y1="344" x2="482" y2="354" />
+          </g>
+          <!-- the plate (title block) -->
+          <g>
+            <rect x="78" y="36" width="394" height="44" fill="none" stroke="var(--ink)" stroke-width="2" />
+            <line x1="176" y1="36" x2="176" y2="80" stroke="var(--rule)" stroke-width="1" />
+            <line x1="294" y1="36" x2="294" y2="80" stroke="var(--rule)" stroke-width="1" />
+            <line x1="78" y1="58" x2="472" y2="58" stroke="var(--rule)" stroke-width="1" />
+            <rect x="78" y="36" width="98" height="22" fill="var(--signal)" />
+            <text x="86" y="51" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1" fill="#ffffff">MODE</text>
+            <text x="184" y="51" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1" fill="var(--ink-2)">SOURCE</text>
+            <text x="302" y="51" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1" fill="var(--ink-2)">DATE</text>
+            <text x="86" y="73" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1" fill="var(--ink-2)">GENERATOR</text>
+            <text x="184" y="73" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1" fill="var(--ink-2)">HASH</text>
+            <text x="302" y="73" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1" fill="var(--ink-2)">COUNTS</text>
+          </g>
+          <!-- serif headline bars -->
+          <rect x="78" y="100" width="300" height="14" fill="var(--ink)" />
+          <rect x="78" y="120" width="220" height="14" fill="var(--ink)" />
+          <!-- body lines -->
+          <g stroke="var(--ink-2)" stroke-width="2" opacity="0.55">
+            <line x1="78" y1="152" x2="430" y2="152" /><line x1="78" y1="164" x2="412" y2="164" />
+            <line x1="78" y1="176" x2="424" y2="176" /><line x1="78" y1="188" x2="330" y2="188" />
+          </g>
+          <!-- carbon well -->
+          <rect x="78" y="204" width="394" height="56" rx="2" fill="var(--code-bg)" />
+          <text x="90" y="224" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#8d8472" letter-spacing="1">BASH</text>
+          <text x="90" y="244" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="var(--code-ink)">$ node bin/htmlify-answer.js --validate ...</text>
+          <!-- stamp -->
+          <rect x="78" y="276" width="58" height="20" rx="2" fill="none" stroke="var(--ok)" stroke-width="1.5" />
+          <text x="90" y="290" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1" fill="var(--ok)">PASS</text>
+          <!-- plate footer -->
+          <rect x="78" y="310" width="394" height="20" fill="none" stroke="var(--ink)" stroke-width="1.5" />
+          <text x="86" y="324" font-family="ui-monospace, Menlo, monospace" font-size="9" letter-spacing="1" fill="var(--ink-2)">PLATE · MODE · TITLE · PROGRESS</text>
+          <!-- leader lines + labels -->
+          <g stroke="var(--rule)" stroke-width="1">
+            <line x1="472" y1="58" x2="560" y2="58" />
+            <line x1="378" y1="107" x2="560" y2="107" />
+            <line x1="472" y1="232" x2="560" y2="232" />
+            <line x1="136" y1="286" x2="560" y2="286" />
+            <line x1="472" y1="320" x2="560" y2="320" />
+            <line x1="68" y1="12" x2="560" y2="12" />
+          </g>
+          <g font-family="ui-monospace, Menlo, monospace" font-size="11" letter-spacing="1" fill="var(--ink)">
+            <text x="568" y="16">CROP MARKS — print registration, quiet on screen</text>
+            <text x="568" y="62">THE PLATE — title block: mode, source, date, hash</text>
+            <text x="568" y="111">DISPLAY SERIF — one idea, Charter/Georgia</text>
+            <text x="568" y="236">CARBON WELL — the terminal lives inside the doc</text>
+            <text x="568" y="290">STAMP — PASS / RISK / NEEDS VERIFICATION</text>
+            <text x="568" y="324">PLATE FOOTER — page n / total, mode, title</text>
+          </g>
+        </svg>
+        <figcaption>Fig 2 · Hardcopy devices, labeled · Source: skills/deckify/references/hardcopy.md</figcaption>
+      </figure>
+    </div>
+    <footer class="plate"><span>Plate 06 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Walk the labels clockwise. The visual language is printed technical matter — engineering plates and datasheets — not CRT kitsch and not SaaS gradients. Call out two devices specifically: the plate, which makes every artifact self-describing (mode, source, date, hash — provenance you can read), and the carbon well — the terminal is quoted INSIDE the document, which is the relationship inversion this whole talk is about. Hairlines instead of shadows; one orange accent; everything else is ink on paper.</aside>
+  </section>
+
+  <!-- 07 · SKILL FAMILY -->
+  <section class="slide" data-title="The skill family">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">7.0</span>The skill family</p>
+      <h2>Two skills, one contract</h2>
+      <div class="cellgrid cols-2">
+        <div class="cell">
+          <h3>htmlify — operator artifacts</h3>
+          <ul>
+            <li><code>operator-brief</code> · <code>status-report</code> — what happened, what is next</li>
+            <li><code>build-plan</code> · <code>implementation-map</code> — phases, files, data flow</li>
+            <li><code>pr-review-packet</code> · <code>release-brief</code> — diff tour, deploy proof</li>
+            <li><code>incident-report</code> · <code>decision-brief</code> — timeline, options, tradeoffs</li>
+            <li><code>explainer</code> · <code>prototype</code> / <code>editor</code> — concepts, clickable flows</li>
+          </ul>
+        </div>
+        <div class="cell">
+          <h3>deckify — presentation artifacts</h3>
+          <ul>
+            <li><code>talk-deck</code> — speaker notes + run-of-show (this file)</li>
+            <li><code>workshop-deck</code> — exercises, labs, checkpoints</li>
+            <li><code>essay-deck</code> — deck plus long-form guide</li>
+            <li><code>demo-deck</code> — live demos with fallbacks</li>
+            <li><code>launch-deck</code> · <code>teaching-guide</code> — narrative, PDF-first</li>
+          </ul>
+        </div>
+      </div>
+      <p class="kicker">Shared rules: smallest mode that fits, evidence first, self-contained file, validate before shipping.</p>
+    </div>
+    <footer class="plate"><span>Plate 07 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Mode selection is the actual skill here: the instruction is "pick the smallest artifact mode that fits," which prevents both over-production (a deck for a yes/no question) and under-production (a markdown wall for an incident review). htmlify covers operator work; deckify extends it with notes, timing, and guide output for anything you present. Mention the meta-proof: this deck is deckify's own talk-deck mode, validated by the repo's validator.</aside>
+  </section>
+
+  <!-- 08 · SECURITY POSTURE -->
+  <section class="slide" data-title="Security posture">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">8.0</span>Self-containment is a security posture</p>
+      <h2>Generated HTML is untrusted until validated</h2>
+      <div class="split">
+        <div>
+          <table>
+            <thead><tr><th>Banned in every profile</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">&lt;script src&gt; · CDNs</td><td>no remote code, ever</td></tr>
+              <tr><td class="mono">inline <code>on*</code> handler attributes</td><td>script goes in one auditable block</td></tr>
+              <tr><td class="mono">javascript: URLs · meta refresh</td><td>no sneaky execution or redirects</td></tr>
+              <tr><td class="mono">iframe · object · embed · base</td><td>no foreign documents inside yours</td></tr>
+              <tr><td class="mono">external fonts, images, css url()</td><td>no phone-home, works offline forever</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure>
+          <svg viewBox="0 0 440 300" role="img" aria-label="Three validation profiles as nested boxes: rich allows no scripts, app adds one inline script, deck adds the slide contract">
+            <g fill="none" stroke="var(--ink)" stroke-width="1.5">
+              <rect x="14" y="14" width="412" height="272" />
+              <rect x="38" y="66" width="364" height="196" />
+              <rect x="62" y="118" width="316" height="120" />
+            </g>
+            <g font-family="ui-monospace, Menlo, monospace" font-size="13" letter-spacing="1" fill="var(--ink)">
+              <text x="28" y="42">RICH — documents</text>
+              <text x="52" y="94">APP — interactive</text>
+              <text x="76" y="146">DECK — presentations</text>
+            </g>
+            <g font-family="system-ui, sans-serif" font-size="12" fill="var(--ink-2)">
+              <text x="200" y="42">no scripts at all · pure reading</text>
+              <text x="200" y="94">+ one inline script, still no remote</text>
+              <text x="76" y="170">+ slides, keyboard nav,</text>
+              <text x="76" y="188">speaker notes enforced</text>
+            </g>
+            <rect x="62" y="206" width="120" height="20" rx="2" fill="none" stroke="var(--signal)" stroke-width="1.5" />
+            <text x="72" y="220" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1" fill="var(--signal)">THIS DECK</text>
+          </svg>
+          <figcaption>Fig 3 · Validation profiles, strictest outward · Source: src/validate.js</figcaption>
+        </figure>
+      </div>
+    </div>
+    <footer class="plate"><span>Plate 08 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Key reframe: self-containment is not an aesthetic preference, it is the threat model. A model-generated file that can load remote code is an exfiltration vector; a file that cannot reach the network is just a document. The validator enforces this mechanically — banned constructs are errors, and an artifact with errors does not ship; the system falls back to plain local HTML instead. Profiles ratchet: rich has zero script, app allows one inline block, deck adds the structural contract this very file passed.</aside>
+  </section>
+
+  <!-- 09 · ANNOTATION LOOP -->
+  <section class="slide" data-title="The annotation loop">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">9.0</span>The annotation loop</p>
+      <h2>The document talks back</h2>
+      <figure>
+        <svg viewBox="0 0 960 300" role="img" aria-label="Cycle diagram: artifact opens in the browser, reader selects text and comments, comments export as markdown, the agent applies edits, and a revised artifact returns to the browser">
+          <g fill="none" stroke="var(--ink)" stroke-width="1.5">
+            <rect x="40" y="40" width="220" height="76" />
+            <rect x="370" y="40" width="220" height="76" />
+            <rect x="700" y="40" width="220" height="76" />
+            <rect x="370" y="184" width="220" height="76" />
+          </g>
+          <g font-family="ui-monospace, Menlo, monospace" font-size="12" letter-spacing="1" fill="var(--ink)">
+            <text x="54" y="66">ARTIFACT IN BROWSER</text>
+            <text x="384" y="66">SELECT + COMMENT</text>
+            <text x="714" y="66">EXPORT COMMENTS</text>
+            <text x="384" y="210">AGENT APPLIES EDITS</text>
+          </g>
+          <g font-family="system-ui, sans-serif" font-size="12" fill="var(--ink-2)">
+            <text x="54" y="88">answer.html, file://</text>
+            <text x="54" y="104">read like a reviewer</text>
+            <text x="384" y="88">highlight any passage,</text>
+            <text x="384" y="104">attach a note in place</text>
+            <text x="714" y="88">one markdown bundle:</text>
+            <text x="714" y="104">quote + comment + anchor</text>
+            <text x="384" y="232">paste bundle into session;</text>
+            <text x="384" y="248">agent revises the artifact</text>
+          </g>
+          <g stroke="var(--ink)" stroke-width="1.5" fill="var(--ink)">
+            <line x1="260" y1="78" x2="362" y2="78" /><path d="M362 78 l-10 -5 v10 z" />
+            <line x1="590" y1="78" x2="692" y2="78" /><path d="M692 78 l-10 -5 v10 z" />
+            <path d="M810 116 v106 h-228" fill="none" /><path d="M582 222 l10 -5 v10 z" />
+          </g>
+          <g stroke="var(--signal)" stroke-width="2" fill="none">
+            <path d="M370 222 h-220 v-98" />
+          </g>
+          <path d="M150 124 l-5 10 h10 z" fill="var(--signal)" stroke="none" />
+          <text x="160" y="180" font-family="ui-monospace, Menlo, monospace" font-size="11" letter-spacing="1" fill="var(--signal)">REVISED ARTIFACT</text>
+        </svg>
+        <figcaption>Fig 4 · Comment in the browser, markdown back to the agent · Source: htmlify export-comments workflow</figcaption>
+      </figure>
+    </div>
+    <footer class="plate"><span>Plate 09 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">This is the feature that makes artifacts a loop instead of a dead end. You review the document the way you review a PR: select a passage, leave a note anchored to it. Export produces one markdown bundle — quote, comment, anchor — which is exactly the format an agent ingests well. Paste it back, the agent revises, the orange edge closes the loop. The artifact becomes the shared workspace between you and the model, replacing "scroll up and describe what you meant."</aside>
+  </section>
+
+  <!-- 10 · DEMO BEAT -->
+  <section class="slide" data-title="Demo">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">10.0</span>Demo · live</p>
+      <h2>/htmlify, end to end</h2>
+      <div class="split">
+        <div>
+          <table>
+            <thead><tr><th>Step</th><th>Beat</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">1</td><td>Ask the agent a question with shape — a six-option architecture comparison</td></tr>
+              <tr><td class="mono">2</td><td>Run <code>/htmlify</code> on the answer</td></tr>
+              <tr><td class="mono">3</td><td>Validator runs; artifact opens in the default browser</td></tr>
+              <tr><td class="mono">4</td><td>Highlight a weak claim, leave a comment, export the bundle</td></tr>
+              <tr><td class="mono">5</td><td>Paste the bundle back; the agent ships a revised artifact</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pending-visual" data-imagegen-prompt="Browser window screenshot of an htmlify decision-brief artifact open on file://, Hardcopy design: warm paper background, top title-block plate with one international-orange MODE cell, serif headline, six-option comparison table with hairline borders, a dark carbon code well, and an open annotation comment box anchored to a highlighted table row. 16:9 landscape, no readable body text required.">
+          <span class="pv-meta">Visual slot · 16:9 · fallback if the live demo fails</span>
+          <span class="stamp warn">Pending visual</span>
+          <p style="font-size:14px; color:var(--ink-2); max-width:42ch;">Screenshot of the rendered decision-brief artifact with an annotation open. To be captured from a real session before recording — not faked, not illustrated.</p>
+        </div>
+      </div>
+    </div>
+    <footer class="plate"><span>Plate 10 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Switch to the live terminal here; this slide is the safety net, not the demo. Rehearse the five beats so the whole loop lands inside three minutes. If the live demo breaks, narrate over the fallback screenshot slot — and note honestly that the capture is pending until a real session screenshot exists; never present a mockup as evidence. The moment to sell is step 4 to 5: comment in the browser, revision from the agent.</aside>
+  </section>
+
+  <!-- 11 · FAILURE MODES -->
+  <section class="slide" data-title="When to stay in the terminal">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">11.0</span>Failure modes</p>
+      <h2>When to stay in the terminal</h2>
+      <table class="measure" style="max-width: 72ch;">
+        <thead><tr><th>Answer shape</th><th>Right channel</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Short, linear, command-like</td><td class="mono">stdout</td><td>you will act, not re-read</td></tr>
+          <tr><td>Yes/no plus one reason</td><td class="mono">stdout</td><td>a file is ceremony</td></tr>
+          <tr><td>Mid-loop iteration, half-formed</td><td class="mono">stdout</td><td>artifacts assert; drafts should not</td></tr>
+          <tr><td>Comparison, plan, timeline, review</td><td class="mono">artifact</td><td>shape needs layout</td></tr>
+          <tr><td>Anything headed to a meeting or archive</td><td class="mono">artifact</td><td>permanence is the point</td></tr>
+        </tbody>
+      </table>
+      <p class="kicker">Rule of thumb: if you would never scroll back to it, do not make a file out of it.</p>
+    </div>
+    <footer class="plate"><span>Plate 11 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Credibility slide — argue against your own tool. Most agent output should STAY in the terminal: command sequences, quick lookups, mid-loop iteration. An artifact for a yes/no answer is ceremony, and worse, artifacts carry authority — a half-formed draft typeset like an engineering plate reads as more settled than it is. The skill encodes this as "smallest mode that fits," where the smallest mode is often markdown. Land the rule of thumb verbatim.</aside>
+  </section>
+
+  <!-- 12 · INSTALL -->
+  <section class="slide" data-title="Install">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">12.0</span>Install</p>
+      <h2>One command per agent</h2>
+      <div class="well">
+        <span class="well-meta">Claude Code · skill</span>
+        <pre>git clone https://github.com/zakelfassi/htmlify.git ~/.claude/skills/htmlify</pre>
+      </div>
+      <div class="well">
+        <span class="well-meta">Codex · skill</span>
+        <pre>git clone https://github.com/zakelfassi/htmlify.git ~/.codex/skills/htmlify</pre>
+      </div>
+      <div class="well">
+        <span class="well-meta">Pi · extension</span>
+        <pre>pi install npm:@zakelfassi/htmlify</pre>
+      </div>
+      <div class="well">
+        <span class="well-meta">Any agent · CLI pipe</span>
+        <pre>printf '%s' "$ANSWER" | npx @zakelfassi/htmlify htmlify-answer --title "Answer"</pre>
+      </div>
+    </div>
+    <footer class="plate"><span>Plate 12 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Keep this fast — under a minute, no live typing. Same repo, four entry points: a skill folder for Claude Code and Codex, a native extension for Pi, and a plain CLI pipe for everything else — Cursor, Windsurf, Aider, or a shell script. The CLI line is the universal adapter: any agent that can pipe text can produce a validated artifact. Hooks for automatic export on long answers are in the README.</aside>
+  </section>
+
+  <!-- 13 · RUN OF SHOW -->
+  <section class="slide" data-title="Run of show">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">13.0</span>Run of show · chapters copy-pastable for YouTube</p>
+      <h2>15 minutes, chaptered</h2>
+      <table class="measure" style="max-width: 76ch;">
+        <thead><tr><th>Time</th><th>Chapter</th><th>Beat</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">00:00</td><td>Cold open</td><td>the wall of markdown, scrolling away</td></tr>
+          <tr><td class="mono">01:10</td><td>The problem</td><td>ephemeral + unreadable at length</td></tr>
+          <tr><td class="mono">02:40</td><td>The thesis</td><td>answers with shape deserve a document</td></tr>
+          <tr><td class="mono">04:00</td><td>Mental model</td><td>evidence, author, validate — one file</td></tr>
+          <tr><td class="mono">05:30</td><td>Anatomy of an artifact</td><td>plate, wells, stamps, crop marks</td></tr>
+          <tr><td class="mono">07:00</td><td>The skill family</td><td>htmlify modes, deckify modes</td></tr>
+          <tr><td class="mono">08:20</td><td>Security posture</td><td>what the validator bans; three profiles</td></tr>
+          <tr><td class="mono">09:50</td><td>The annotation loop</td><td>comment in browser, markdown back</td></tr>
+          <tr><td class="mono">11:10</td><td>Demo</td><td>/htmlify end to end, fallback ready</td></tr>
+          <tr><td class="mono">13:00</td><td>When to stay in the terminal</td><td>failure modes, rule of thumb</td></tr>
+          <tr><td class="mono">13:50</td><td>Install</td><td>one command per agent</td></tr>
+          <tr><td class="mono">14:30</td><td>Close</td><td>checklist + repo</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <footer class="plate"><span>Plate 13 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Production slide — skip it live or flash it as proof of preparation; it exists for the editor and the YouTube description. The Time and Chapter columns paste directly as YouTube chapters. The tight beats are the demo (exactly three minutes, 11:10 to 14:00 including buffer) and the close; if the demo overruns, cut the install walkthrough to a pointer at the README.</aside>
+  </section>
+
+  <!-- 14 · CLOSE -->
+  <section class="slide" data-title="Close">
+    <div class="slide-body">
+      <p class="eyebrow"><span class="num">14.0</span>Close</p>
+      <h2>Before your next long answer evaporates</h2>
+      <ul class="check">
+        <li>Notice the shape: comparison, plan, timeline, review, system</li>
+        <li>Give it a document — one self-contained HTML file</li>
+        <li>Validate before shipping: <span class="mono">--profile rich | app | deck</span>, zero errors</li>
+        <li>Review in the browser; send comments back as markdown</li>
+        <li>Keep short, linear, command-like answers in the terminal</li>
+      </ul>
+      <hr class="emphasis-rule" />
+      <p class="lede">Star it, install it, htmlify your next real answer:<br /><a class="cta-link" href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a></p>
+    </div>
+    <footer class="plate"><span>Plate 14 / 14</span><span class="mode">Talk-Deck</span><span>stdout, made permanent</span></footer>
+    <aside class="notes">Close the loop with the cold open: that rollback strategy from slide two would still exist as a file. Read the checklist as a habit, not features — notice shape, make the document, validate, annotate, and keep the terminal for everything terminal-shaped. Single CTA: the repo. Ask them to htmlify one real answer this week — the habit sells itself after the first artifact you reopen three days later. Thank the room; hold the slide for questions.</aside>
+  </section>
+
+</main>
+
+<aside class="notes-panel" id="notes-panel" hidden>
+  <p class="np-label">Speaker notes · press N to hide</p>
+  <p class="np-body" id="notes-panel-body"></p>
+</aside>
+
+<script>
+(function () {
+  'use strict';
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var progress = document.getElementById('progress');
+  var panel = document.getElementById('notes-panel');
+  var panelBody = document.getElementById('notes-panel-body');
+  var notesBtn = document.getElementById('toggle-notes');
+  var prevBtn = document.getElementById('prev-slide');
+  var nextBtn = document.getElementById('next-slide');
+  var current = 0;
+  slides.forEach(function (slide, i) {
+    if (slide.classList.contains('active')) current = i;
+  });
+
+  function syncNotes() {
+    var src = slides[current].querySelector('.notes');
+    panelBody.textContent = src ? src.textContent.trim() : 'No notes for this slide.';
+  }
+
+  function show(index) {
+    current = Math.min(slides.length - 1, Math.max(0, index));
+    slides.forEach(function (slide, i) {
+      slide.classList.toggle('active', i === current);
+    });
+    if (progress) progress.textContent = (current + 1) + ' / ' + slides.length;
+    syncNotes();
+  }
+
+  function toggleNotes() {
+    panel.hidden = !panel.hidden;
+    notesBtn.setAttribute('aria-pressed', String(!panel.hidden));
+  }
+
+  document.addEventListener('keydown', function (event) {
+    var key = event.key;
+    if (key === 'ArrowRight' || key === 'PageDown' || key === ' ') {
+      event.preventDefault();
+      show(current + 1);
+    } else if (key === 'ArrowLeft' || key === 'PageUp') {
+      event.preventDefault();
+      show(current - 1);
+    } else if (key === 'Home') {
+      event.preventDefault();
+      show(0);
+    } else if (key === 'End') {
+      event.preventDefault();
+      show(slides.length - 1);
+    } else if (key === 'n' || key === 'N') {
+      toggleNotes();
+    }
+  });
+
+  notesBtn.addEventListener('click', toggleNotes);
+  prevBtn.addEventListener('click', function () { show(current - 1); });
+  nextBtn.addEventListener('click', function () { show(current + 1); });
+
+  show(current);
+})();
+</script>
+</body>
+</html>

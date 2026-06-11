@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Incident Report — Capture Notification Overwrote the Answer</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      /* Paper (light) */
+      --paper: #faf7f0;
+      --surface: #ffffff;
+      --ink: #1c1a15;
+      --ink-2: #6e6759;
+      --rule: #d9d2c3;
+      --rule-strong: #1c1a15;
+      --signal: #e84b0f;
+      --signal-wash: #fbeae1;
+      --ok: #2c7a52;
+      --warn: #a87514;
+      --risk: #b5341b;
+      --code-bg: #211e18;
+      --code-ink: #e8e2d4;
+      --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        /* Carbon (dark) */
+        --paper: #161410;
+        --surface: #1e1b16;
+        --ink: #ede8dc;
+        --ink-2: #a39a88;
+        --rule: #3a352b;
+        --rule-strong: #ede8dc;
+        --signal: #ff6b2c;
+        --signal-wash: #3a2114;
+        --ok: #5bbe8c;
+        --warn: #d9a93e;
+        --risk: #e2603f;
+        --code-bg: #0e0d0a;
+        --code-ink: #d8d2c4;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 32px 72px;
+    }
+
+    /* Crop marks */
+    .crop { position: fixed; width: 14px; height: 14px; pointer-events: none; z-index: 10; }
+    .crop::before, .crop::after { content: ""; position: absolute; background: var(--rule); }
+    .crop::before { width: 14px; height: 1px; }
+    .crop::after { width: 1px; height: 14px; }
+    .crop.tl { top: 10px; left: 10px; }
+    .crop.tr { top: 10px; right: 10px; }
+    .crop.bl { bottom: 10px; left: 10px; }
+    .crop.br { bottom: 10px; right: 10px; }
+    .crop.tl::before, .crop.tl::after { top: 0; left: 0; }
+    .crop.tr::before { top: 0; right: 0; } .crop.tr::after { top: 0; right: 0; }
+    .crop.bl::before { bottom: 0; left: 0; } .crop.bl::after { bottom: 0; left: 0; }
+    .crop.br::before { bottom: 0; right: 0; } .crop.br::after { bottom: 0; right: 0; }
+
+    /* Metadata voice */
+    .meta, .eyebrow, .stamp, .label, th, .plate-label, .t-meta, .anno-num, .sec-num, figcaption {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+    }
+    .eyebrow { color: var(--ink-2); margin: 0 0 14px; }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(34px, 5vw, 52px);
+      line-height: 1.08;
+      letter-spacing: -0.015em;
+      margin: 0 0 10px;
+      font-weight: 700;
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: 26px;
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+      margin: 6px 0 16px;
+      font-weight: 700;
+    }
+    .lede { color: var(--ink-2); max-width: 70ch; margin: 0 0 32px; }
+    p { max-width: 72ch; }
+    a { color: var(--ink); text-decoration-color: var(--rule-strong); text-underline-offset: 2px; }
+    code { font-family: var(--font-mono); font-size: 0.92em; }
+    p code, li code, td code {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      padding: 0 4px;
+      font-size: 12.5px;
+    }
+
+    /* The Plate */
+    .plate {
+      border: 2px solid var(--rule-strong);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      margin: 0 0 44px;
+      break-inside: avoid;
+    }
+    .plate-cell { padding: 10px 12px 12px; border-left: 1px solid var(--rule); min-width: 0; }
+    .plate-cell:first-child { border-left: none; }
+    .plate-label { display: block; color: var(--ink-2); margin-bottom: 3px; }
+    .plate-value { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0.02em; overflow-wrap: break-word; }
+    .plate-cell.mode { background: var(--signal); }
+    .plate-cell.mode .plate-label { color: rgba(255,255,255,0.85); }
+    .plate-cell.mode .plate-value { color: #fff; font-weight: 700; }
+    @media (prefers-color-scheme: dark) {
+      .plate-cell.mode .plate-label { color: rgba(28,26,21,0.75); }
+      .plate-cell.mode .plate-value { color: #1c1a15; }
+    }
+    @media (max-width: 720px) {
+      .plate { grid-template-columns: repeat(2, 1fr); }
+      .plate-cell { border-top: 1px solid var(--rule); }
+      .plate-cell:nth-child(-n+2) { border-top: none; }
+      .plate-cell:nth-child(odd) { border-left: none; }
+      .plate-cell:nth-child(even) { border-left: 1px solid var(--rule); }
+    }
+
+    /* Sections */
+    section { margin: 0 0 48px; }
+    .sec-head {
+      border-top: 2px solid var(--rule-strong);
+      padding-top: 8px;
+    }
+    .sec-num { color: var(--ink-2); display: block; margin-bottom: 2px; }
+
+    /* Stamps */
+    .stamp {
+      display: inline-block;
+      border: 1.5px solid currentColor;
+      border-radius: 2px;
+      padding: 2px 8px;
+      background: transparent;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .stamp.ok { color: var(--ok); }
+    .stamp.warn { color: var(--warn); }
+    .stamp.risk { color: var(--risk); }
+    .stamp.signal { color: var(--signal); }
+    .stamp.neutral { color: var(--ink-2); }
+
+    /* Impact cells (shared-hairline grid, not floating cards) */
+    .cells {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: 1px solid var(--rule);
+    }
+    .cell { padding: 12px 14px 14px; border-left: 1px solid var(--rule); min-width: 0; }
+    .cell:first-child { border-left: none; }
+    .cell .label { display: block; color: var(--ink-2); margin-bottom: 6px; }
+    .cell .big {
+      font-family: var(--font-display);
+      font-size: 19px;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .cell .note { font-size: 13px; color: var(--ink-2); margin: 0; }
+    @media (max-width: 720px) {
+      .cells { grid-template-columns: 1fr 1fr; }
+      .cell { border-top: 1px solid var(--rule); }
+      .cell:nth-child(-n+2) { border-top: none; }
+      .cell:nth-child(odd) { border-left: none; }
+      .cell:nth-child(even) { border-left: 1px solid var(--rule); }
+    }
+
+    /* Timeline */
+    .timeline { border-top: 1px solid var(--rule); }
+    .t-row {
+      display: grid;
+      grid-template-columns: 170px 110px 1fr 150px;
+      gap: 0 18px;
+      padding: 12px 0 13px;
+      border-bottom: 1px solid var(--rule);
+      align-items: baseline;
+    }
+    .t-meta { color: var(--ink-2); }
+    .t-sha { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; }
+    .t-body { font-size: 14px; max-width: none; margin: 0; }
+    .t-body strong { font-family: var(--font-display); font-size: 15.5px; letter-spacing: -0.01em; }
+    .t-stamp { text-align: right; }
+    .t-row.fix .t-meta { color: var(--signal); font-weight: 700; }
+    @media (max-width: 720px) {
+      .t-row { grid-template-columns: 1fr 1fr; }
+      .t-body { grid-column: 1 / -1; }
+      .t-stamp { text-align: right; }
+    }
+
+    /* Carbon wells */
+    .well {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 2px;
+      margin: 18px 0 10px;
+      overflow-x: auto;
+    }
+    .well-meta {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      color: #8f8774;
+      padding: 8px 14px;
+      border-bottom: 1px solid #3a352b;
+    }
+    .well pre {
+      margin: 0;
+      padding: 14px 16px 16px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.55;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .well .del { color: #e2603f; }
+    .well .ins { color: #5bbe8c; }
+    .well .ctx { color: #8f8774; }
+    .well .cmt { color: #d9a93e; }
+    .well .anno-num { color: var(--code-bg); background: var(--code-ink); border-radius: 2px; padding: 0 4px; letter-spacing: 0.04em; }
+
+    /* Annotation list keyed to diff */
+    .annos { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--rule); }
+    .annos li {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 0 14px;
+      padding: 10px 0 11px;
+      border-bottom: 1px solid var(--rule);
+      font-size: 14px;
+    }
+    .annos .anno-num { color: var(--ink-2); padding-top: 2px; }
+
+    /* Generic table */
+    table { border-collapse: collapse; width: 100%; }
+    th {
+      text-align: left;
+      color: var(--ink-2);
+      font-weight: 400;
+      padding: 8px 14px 8px 0;
+      border-bottom: 2px solid var(--rule-strong);
+    }
+    td { padding: 10px 14px 11px 0; border-bottom: 1px solid var(--rule); font-size: 14px; vertical-align: top; }
+    td:last-child, th:last-child { padding-right: 0; }
+
+    ul.tight { margin: 8px 0 0; padding-left: 20px; }
+    ul.tight li { margin-bottom: 8px; max-width: 72ch; }
+
+    /* Footer plate strip */
+    footer {
+      border-top: 2px solid var(--rule-strong);
+      margin-top: 56px;
+      padding-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    footer .meta { color: var(--ink-2); }
+
+    @media print {
+      :root { --paper: #ffffff; }
+      .no-print { display: none; }
+      .plate, .well, .t-row, section { break-inside: avoid; }
+      .well { border: 1px solid var(--rule); }
+      a { text-decoration: none; }
+      @page { margin: 14mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="crop tl" aria-hidden="true"></div>
+  <div class="crop tr" aria-hidden="true"></div>
+  <div class="crop bl" aria-hidden="true"></div>
+  <div class="crop br" aria-hidden="true"></div>
+
+  <main>
+    <section aria-labelledby="title">
+      <p class="eyebrow">Incident-Report · github.com/zakelfassi/htmlify · pi-html-long-answer-extension · 2026-04-26</p>
+      <h1 id="title">Capture Notification Overwrote the Answer</h1>
+      <p class="lede">
+        The long-answer capture extension notified the user from the <code>message_end</code> event.
+        In Oh-My-Pi, that notification could replace the just-finished assistant text in the terminal &mdash;
+        the answer the user was reading visibly vanished. Fixed by removing the notification entirely:
+        capture is now silent, and <code>/html-last</code> remains the explicit export path.
+      </p>
+
+      <div class="plate" role="table" aria-label="Document plate">
+        <div class="plate-cell mode">
+          <span class="plate-label">Mode</span>
+          <span class="plate-value">INCIDENT-REPORT</span>
+        </div>
+        <div class="plate-cell">
+          <span class="plate-label">Incident</span>
+          <span class="plate-value">capture-notification overwrite</span>
+        </div>
+        <div class="plate-cell">
+          <span class="plate-label">Fixed</span>
+          <span class="plate-value">bd7c5c6 · 2026-04-26</span>
+        </div>
+        <div class="plate-cell">
+          <span class="plate-label">Severity</span>
+          <span class="plate-value">user-visible</span>
+        </div>
+        <div class="plate-cell">
+          <span class="plate-label">Source</span>
+          <span class="plate-value"><a href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a></span>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="impact">
+      <div class="sec-head">
+        <span class="sec-num">1.0 · Impact</span>
+        <h2 id="impact">What the user experienced</h2>
+      </div>
+      <div class="cells">
+        <div class="cell">
+          <span class="label">Severity</span>
+          <span class="big">Answer loss on screen</span>
+          <p class="note">The finished assistant answer was visibly replaced by the capture notice in the terminal. <span class="stamp risk">USER-VISIBLE</span></p>
+        </div>
+        <div class="cell">
+          <span class="label">Scope</span>
+          <span class="big">OMP hosts only</span>
+          <p class="note">The replacement behavior manifested in Oh-My-Pi rendering of <code>message_end</code>-time notifications.</p>
+        </div>
+        <div class="cell">
+          <span class="label">Duration</span>
+          <span class="big">6 days</span>
+          <p class="note">Notification shipped 2026-04-20 (<code>08e669b</code>); removed 2026-04-26 (<code>bd7c5c6</code>).</p>
+        </div>
+        <div class="cell">
+          <span class="label">Data loss</span>
+          <span class="big">None</span>
+          <p class="note">The answer was always captured into session state; <code>/html-last</code> could still export it. <span class="stamp ok">RECOVERABLE</span></p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="timeline">
+      <div class="sec-head">
+        <span class="sec-num">2.0 · Timeline</span>
+        <h2 id="timeline">Discovery to validation</h2>
+      </div>
+      <div class="timeline">
+        <div class="t-row">
+          <span class="t-meta">2026-04-20</span>
+          <span class="t-sha">08e669b</span>
+          <p class="t-body"><strong>Introduced.</strong> Extension ships with <code>notifyLongAnswerAvailable()</code> called from the <code>message_end</code> handler: every long answer ends with an informational notice.</p>
+          <span class="t-stamp"><span class="stamp neutral">SHIPPED</span></span>
+        </div>
+        <div class="t-row">
+          <span class="t-meta">2026-04-24</span>
+          <span class="t-sha">f5fcac7&hellip;7b9e546</span>
+          <p class="t-body"><strong>Hardening pass.</strong> PR #1 hardens the extension (sandboxed open, SVG href blocking); the <code>message_end</code> notification behavior is retained unchanged.</p>
+          <span class="t-stamp"><span class="stamp neutral">UNCHANGED</span></span>
+        </div>
+        <div class="t-row">
+          <span class="t-meta">&le; 2026-04-26</span>
+          <span class="t-sha">&mdash;</span>
+          <p class="t-body"><strong>Discovery.</strong> In Oh-My-Pi, the capture notice could replace the just-finished assistant text on screen. Exact report time is not recorded in git history.</p>
+          <span class="t-stamp"><span class="stamp warn">NEEDS VERIFICATION</span></span>
+        </div>
+        <div class="t-row">
+          <span class="t-meta">2026-04-26</span>
+          <span class="t-sha">bd7c5c6</span>
+          <p class="t-body"><strong>Diagnosis.</strong> Root cause isolated to the notification side-effect fired from <code>message_end</code>, racing the host&rsquo;s rendering of the message that just ended.</p>
+          <span class="t-stamp"><span class="stamp neutral">CONFIRMED</span></span>
+        </div>
+        <div class="t-row fix">
+          <span class="t-meta">2026-04-26 00:26</span>
+          <span class="t-sha">bd7c5c6</span>
+          <p class="t-body"><strong>Fix.</strong> <code>notifyLongAnswerAvailable()</code> deleted; the call site replaced by an explanatory comment. Capture stays silent and headless-safe. Version 0.2.0 &rarr; 0.2.1; extension build <code>2026-04-20e</code> &rarr; <code>2026-04-26a</code>.</p>
+          <span class="t-stamp"><span class="stamp signal">FIXED</span></span>
+        </div>
+        <div class="t-row">
+          <span class="t-meta">2026-04-26</span>
+          <span class="t-sha">bd7c5c6</span>
+          <p class="t-body"><strong>Validation.</strong> 42 test lines added in <code>test/extension.test.js</code>: the capture test now asserts <em>no</em> notification fires, and a new chooser-fallback test proves export still works end to end. README and flow diagram updated to describe silent capture.</p>
+          <span class="t-stamp"><span class="stamp ok">PASS</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="rootcause">
+      <div class="sec-head">
+        <span class="sec-num">3.0 · Root Cause</span>
+        <h2 id="rootcause">A UI side-effect racing the host&rsquo;s render</h2>
+      </div>
+      <p>
+        The <code>message_end</code> handler did two jobs: capture the long answer into session state
+        (correct) and immediately call <code>notify()</code> with a multi-line usage hint (the defect).
+        <code>message_end</code> fires at the exact moment the host is finalizing the on-screen rendering
+        of that same message. In Oh-My-Pi, the notification emitted inside that window could land on the
+        region holding the just-finished assistant text and replace it &mdash; the user watched their
+        answer disappear in favor of a notice about exporting it.
+      </p>
+      <p>
+        The capture itself never needed the UI. The earlier guard <code>if (!ctx || !ctx.hasUI) return;</code>
+        existed only to gate the notification, which means the defective side-effect was also silently
+        blocking capture on headless hosts &mdash; a secondary bug removed by the same fix.
+      </p>
+    </section>
+
+    <section aria-labelledby="thefix">
+      <div class="sec-head">
+        <span class="sec-num">4.0 · The Fix</span>
+        <h2 id="thefix">Remove the notification, keep the capture</h2>
+      </div>
+      <div class="well">
+        <div class="well-meta">diff · index.js · bd7c5c6 · excerpt</div>
+        <pre><span class="ctx">@@ message_end handler @@</span>
+   await rememberEligibleSource(source);
+
+   if (!isLongAnswer(info.text, state.config)) return;
+<span class="del">-  if (!ctx || !ctx.hasUI) return;</span>                <span class="anno-num">01</span>
+
+   state.lastPromptedSignature = signature;
+<span class="del">-  notifyLongAnswerAvailable(ctx, source);</span>       <span class="anno-num">02</span>
+<span class="ins">+  </span><span class="cmt">// Avoid notifying from message_end: in OMP this can replace</span>
+<span class="ins">+  </span><span class="cmt">// the just-finished assistant text.</span>      <span class="anno-num">03</span>
+<span class="ins">+  </span><span class="cmt">// The answer is already captured; /html-last remains</span>
+<span class="ins">+  </span><span class="cmt">// available when the user wants the export.</span>
+
+<span class="ctx">@@ helper removed @@</span>
+<span class="del">-  function notifyLongAnswerAvailable(ctx, source) {</span>
+<span class="del">-    notify(ctx, `Long answer captured for HTML export</span>
+<span class="del">-      (${source.stats.words} words). Run /html-last ...`, 'info');</span>
+<span class="del">-  }</span></pre>
+      </div>
+      <ul class="annos">
+        <li><span class="anno-num">01</span><span>The UI guard is gone: capture no longer depends on a UI being present, so headless hosts now record long answers too.</span></li>
+        <li><span class="anno-num">02</span><span>The single defective side-effect &mdash; the only <code>notify()</code> issued from <code>message_end</code> &mdash; is deleted along with its helper.</span></li>
+        <li><span class="anno-num">03</span><span>The rule replaces the call as a code comment, so the constraint survives at the exact place a future change would re-violate it.</span></li>
+      </ul>
+      <p style="font-size:13px; color:var(--ink-2); max-width:72ch;">
+        Excerpt is condensed for the page; the comment in the repository is two lines. Full diff: <code>git show bd7c5c6</code>.
+        The same commit also adds a <code>choices</code> alias for the chooser, a <code>PI_HTML_LONG_ANSWER_SKIP_OPEN</code>
+        test escape hatch, and makes <code>/html-last choose</code> fall back to <code>local</code> export when no chooser UI exists.
+      </p>
+    </section>
+
+    <section aria-labelledby="mitigations">
+      <div class="sec-head">
+        <span class="sec-num">5.0 · Mitigations &amp; Follow-ups</span>
+        <h2 id="mitigations">Keeping this class of bug out</h2>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Rule / action</th><th>Where it lives</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>message_end</code> handlers must stay side-effect-free toward the UI &mdash; capture state, never render.</td>
+            <td>Code comment at the former call site in <code>index.js</code> (bd7c5c6)</td>
+            <td><span class="stamp ok">IN PLACE</span></td>
+          </tr>
+          <tr>
+            <td>Regression test asserts the capture path emits <em>zero</em> notifications (assertion flipped from expecting one to forbidding it).</td>
+            <td><code>test/extension.test.js</code></td>
+            <td><span class="stamp ok">IN PLACE</span></td>
+          </tr>
+          <tr>
+            <td>Export remains user-initiated only: <code>/html-last</code>, <code>/html-last choose</code>, <code>gemini</code>, <code>pi</code>, <code>local</code>.</td>
+            <td>README manual re-test flows, updated in the same commit</td>
+            <td><span class="stamp ok">IN PLACE</span></td>
+          </tr>
+          <tr>
+            <td>User-facing docs and flow diagram no longer promise a notice; they promise the answer stays visible.</td>
+            <td><code>README.md</code>, <code>assets/flow.svg</code></td>
+            <td><span class="stamp ok">UPDATED</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="validation">
+      <div class="sec-head">
+        <span class="sec-num">6.0 · Validation</span>
+        <h2 id="validation">Proof the fix holds</h2>
+      </div>
+      <ul class="tight">
+        <li><strong>Tests:</strong> +42 lines in <code>test/extension.test.js</code> (1 line changed). The long-message capture test now asserts no <q>Long answer captured</q> notification is emitted; a new test drives <code>message_end</code> &rarr; <code>/html-last choose</code> with a failing chooser and proves a local export is written and announced only then. <span class="stamp ok">PASS</span></li>
+        <li><strong>Behavior re-verified:</strong> capture still records the source entry (<code>html-long-answer-source</code>) on long answers, with no UI required and no model turn started. <span class="stamp ok">PASS</span></li>
+        <li><strong>Releases:</strong> package 0.2.1, extension build <code>2026-04-26a</code>. Subsequent commits (1c6f029, e1df5c3 on 2026-05-05) build on the silent-capture behavior without reintroducing a <code>message_end</code> notification.</li>
+        <li><strong>Gap:</strong> no automated OMP terminal-rendering test exists; the overwrite itself was verified manually in OMP, not in CI. <span class="stamp warn">MANUAL ONLY</span></li>
+      </ul>
+    </section>
+
+    <footer>
+      <span class="meta">INCIDENT-REPORT · HTMLIFY · HARDCOPY</span>
+      <span class="meta">EVIDENCE: GIT SHOW BD7C5C6 · GIT LOG INDEX.JS</span>
+      <span class="meta">GENERATED 2026-06-11</span>
+    </footer>
+  </main>
+</body>
+</html>

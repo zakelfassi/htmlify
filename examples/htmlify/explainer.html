@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>When HTML Beats Markdown</title>
+<style>
+:root {
+  color-scheme: light dark;
+  /* Paper (light) */
+  --paper: #faf7f0;
+  --surface: #ffffff;
+  --ink: #1c1a15;
+  --ink-2: #6e6759;
+  --rule: #d9d2c3;
+  --rule-strong: #1c1a15;
+  --signal: #e84b0f;
+  --signal-wash: #fbeae1;
+  --ok: #2c7a52;
+  --warn: #a87514;
+  --risk: #b5341b;
+  --code-bg: #211e18;
+  --code-ink: #e8e2d4;
+  --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Carbon (dark) */
+    --paper: #161410;
+    --surface: #1e1b16;
+    --ink: #ede8dc;
+    --ink-2: #a39a88;
+    --rule: #3a352b;
+    --rule-strong: #ede8dc;
+    --signal: #ff6b2c;
+    --signal-wash: #3a2114;
+    --ok: #5bbe8c;
+    --warn: #d9a93e;
+    --risk: #e2603f;
+    --code-bg: #0e0d0a;
+    --code-ink: #d8d2c4;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 28px 64px;
+}
+
+/* Crop marks */
+.crop { position: fixed; width: 14px; height: 14px; pointer-events: none; z-index: 10; }
+.crop::before, .crop::after { content: ""; position: absolute; background: var(--rule); }
+.crop::before { width: 14px; height: 1px; }
+.crop::after { width: 1px; height: 14px; }
+.crop.tl { top: 10px; left: 10px; }
+.crop.tr { top: 10px; right: 10px; }
+.crop.bl { bottom: 10px; left: 10px; }
+.crop.br { bottom: 10px; right: 10px; }
+.crop.tl::before, .crop.tl::after { top: 0; left: 0; }
+.crop.tr::before, .crop.tr::after { top: 0; right: 0; }
+.crop.bl::before, .crop.bl::after { bottom: 0; left: 0; }
+.crop.br::before, .crop.br::after { bottom: 0; right: 0; }
+
+/* Metadata voice */
+.meta, .plate-label, .stamp, .sec-num, .gloss dt, th, .cell-num, .check-id {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+/* Plate */
+.plate {
+  border: 2px solid var(--rule-strong);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin-bottom: 36px;
+}
+.plate-cell { padding: 10px 12px; border-left: 1px solid var(--rule); min-width: 0; }
+.plate-cell:first-child { border-left: none; }
+.plate-label { display: block; color: var(--ink-2); margin-bottom: 2px; }
+.plate-value { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0.02em; word-break: break-word; }
+.plate-cell.mode { background: var(--signal); color: #fff; }
+.plate-cell.mode .plate-label { color: rgba(255,255,255,0.75); }
+@media (prefers-color-scheme: dark) {
+  .plate-cell.mode { color: #1c1a15; }
+  .plate-cell.mode .plate-label { color: rgba(28,26,21,0.7); }
+}
+
+/* Headings */
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+.subtitle { color: var(--ink-2); max-width: 70ch; margin: 0 0 36px; }
+h2 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 6px 0 14px;
+  font-weight: 700;
+}
+section.block { border-top: 2px solid var(--rule-strong); margin-top: 44px; padding-top: 10px; }
+.sec-num { color: var(--ink-2); display: block; margin-bottom: 2px; }
+p { max-width: 72ch; }
+
+/* TL;DR */
+.tldr {
+  background: var(--signal-wash);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--signal);
+  padding: 16px 20px;
+  margin: 0 0 8px;
+}
+.tldr .meta { color: var(--signal); display: block; margin-bottom: 6px; }
+.tldr p { margin: 0; max-width: 78ch; }
+
+/* Checklist */
+.checklist { list-style: none; margin: 18px 0 4px; padding: 0; border-top: 1px solid var(--rule); }
+.checklist li {
+  display: grid;
+  grid-template-columns: 22px 56px 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--rule);
+}
+.checkbox {
+  width: 13px; height: 13px;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 2px;
+  display: inline-block;
+  position: relative;
+  top: 1px;
+}
+.check-id { color: var(--ink-2); }
+.checklist .cond { max-width: 70ch; }
+.checklist strong { font-weight: 600; }
+.stay-md { color: var(--ink-2); font-size: 14px; margin-top: 14px; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 18px 0 4px; }
+th {
+  text-align: left;
+  color: var(--ink-2);
+  font-weight: 500;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--rule-strong);
+  vertical-align: bottom;
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+  font-size: 14.5px;
+}
+td.sit { font-weight: 600; }
+td + td { border-left: 1px solid var(--rule); }
+th + th { border-left: 1px solid var(--rule); }
+
+/* Stamp */
+.stamp {
+  display: inline-block;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.stamp.html { color: var(--signal); background: var(--signal-wash); }
+.stamp.either { color: var(--ink-2); }
+
+/* Cells grid (families) */
+.cells {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+  margin: 18px 0 4px;
+}
+.cell {
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 16px;
+  min-width: 0;
+}
+.cell-num { color: var(--ink-2); display: block; margin-bottom: 4px; }
+.cell h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.2;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+.cell p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+
+/* Registers */
+.registers { border-top: 1px solid var(--rule); margin: 18px 0 4px; }
+.register {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 16px;
+  padding: 11px 4px;
+  border-bottom: 1px solid var(--rule);
+  align-items: baseline;
+}
+.register .meta { color: var(--ink); }
+
+/* Glossary */
+.gloss { margin: 18px 0 4px; border-top: 1px solid var(--rule); }
+.gloss > div { display: grid; grid-template-columns: 180px 1fr; gap: 16px; padding: 12px 4px; border-bottom: 1px solid var(--rule); }
+.gloss dt { color: var(--ink); padding-top: 3px; }
+.gloss dd { margin: 0; max-width: 70ch; font-size: 14.5px; }
+@media (max-width: 620px) {
+  .gloss > div, .register { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* FAQ */
+.faq { margin: 18px 0 4px; }
+.faq .qa { border-top: 1px solid var(--rule); padding: 16px 4px; }
+.faq .qa:last-child { border-bottom: 1px solid var(--rule); }
+.faq h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+.faq p { margin: 0 0 8px; max-width: 74ch; font-size: 14.5px; }
+.faq p:last-child { margin-bottom: 0; }
+
+/* Carbon well */
+.well {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-radius: 2px;
+  margin: 10px 0;
+  overflow-x: auto;
+}
+.well .well-meta {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10.5px;
+  color: #8f897a;
+  padding: 7px 14px;
+  border-bottom: 1px solid #38332a;
+}
+.well pre { margin: 0; padding: 12px 14px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; }
+
+/* Footer plate */
+.plate.footer { margin-top: 56px; margin-bottom: 0; grid-template-columns: repeat(3, 1fr); }
+a { color: inherit; text-decoration-color: var(--signal); text-underline-offset: 2px; }
+
+@media (max-width: 760px) {
+  .plate { grid-template-columns: repeat(2, 1fr); }
+  .plate-cell { border-top: 1px solid var(--rule); }
+  .plate-cell:nth-child(-n+2) { border-top: none; }
+  .plate-cell:nth-child(odd) { border-left: none; }
+  .plate-cell:nth-child(even) { border-left: 1px solid var(--rule); }
+  .cells { grid-template-columns: 1fr; }
+  .checklist li { grid-template-columns: 22px 1fr; }
+  .checklist .cond { grid-column: 1 / -1; }
+  table { display: block; overflow-x: auto; }
+}
+
+@media print {
+  :root { --paper: #ffffff; }
+  body { font-size: 12px; }
+  main { max-width: none; padding: 0; }
+  .plate { break-inside: avoid; }
+  section.block { break-inside: avoid; }
+  .well { border: 1px solid var(--rule); }
+  @page { margin: 14mm; }
+}
+</style>
+</head>
+<body>
+<div class="crop tl" aria-hidden="true"></div>
+<div class="crop tr" aria-hidden="true"></div>
+<div class="crop bl" aria-hidden="true"></div>
+<div class="crop br" aria-hidden="true"></div>
+
+<main>
+  <header class="plate" aria-label="Document title block">
+    <div class="plate-cell mode">
+      <span class="plate-label">Mode</span>
+      <span class="plate-value">EXPLAINER</span>
+    </div>
+    <div class="plate-cell">
+      <span class="plate-label">Topic</span>
+      <span class="plate-value">HTML VS MARKDOWN</span>
+    </div>
+    <div class="plate-cell">
+      <span class="plate-label">Audience</span>
+      <span class="plate-value">AGENT USERS</span>
+    </div>
+    <div class="plate-cell">
+      <span class="plate-label">Date</span>
+      <span class="plate-value">2026-06-11</span>
+    </div>
+    <div class="plate-cell">
+      <span class="plate-label">Source</span>
+      <span class="plate-value"><a href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a></span>
+    </div>
+  </header>
+
+  <section aria-labelledby="title">
+    <h1 id="title">When HTML beats markdown</h1>
+    <p class="subtitle">The htmlify decision model: which answers should leave the terminal as a self-contained HTML artifact, and which should stay as plain text. Distilled from the project's principles reference.</p>
+
+    <aside class="tldr" aria-label="TL;DR">
+      <span class="meta">TL;DR</span>
+      <p>Markdown is the right default for short, linear, command-like answers — HTML earns its keep only when the reader gains something a wall of text cannot give. Choose HTML when the work needs side-by-side comparison, has a shape (architecture, flow, timeline), will be shared in a meeting or printed to PDF, benefits from browser-native interaction, or can become a reusable local tool. The output is always one self-contained file: inline CSS, no external assets, validated before it ships.</p>
+    </aside>
+  </section>
+
+  <section class="block" aria-labelledby="h-criteria">
+    <span class="sec-num">1.0 · Decision criteria</span>
+    <h2 id="h-criteria">Choose HTML when&hellip;</h2>
+    <p>At least one of these five conditions must hold. If none do, stay in markdown.</p>
+    <ul class="checklist">
+      <li>
+        <span class="checkbox" aria-hidden="true"></span>
+        <span class="check-id">C-01</span>
+        <span class="cond"><strong>Side-by-side comparison.</strong> The reader needs to compare options, diffs, designs, risks, timelines, or plans next to each other.</span>
+      </li>
+      <li>
+        <span class="checkbox" aria-hidden="true"></span>
+        <span class="check-id">C-02</span>
+        <span class="cond"><strong>The work has a shape.</strong> Architecture, flow, ownership, dependencies, lifecycle, or an incident timeline — spatial structure that linear prose flattens.</span>
+      </li>
+      <li>
+        <span class="checkbox" aria-hidden="true"></span>
+        <span class="check-id">C-03</span>
+        <span class="cond"><strong>It travels.</strong> The artifact will be reviewed in a meeting, printed to PDF, archived, or handed to another implementer.</span>
+      </li>
+      <li>
+        <span class="checkbox" aria-hidden="true"></span>
+        <span class="check-id">C-04</span>
+        <span class="cond"><strong>Interaction helps.</strong> Tabs, filters, toggles, collapsible detail, comments, drag/drop ordering, or copy/export buttons would genuinely serve the user.</span>
+      </li>
+      <li>
+        <span class="checkbox" aria-hidden="true"></span>
+        <span class="check-id">C-05</span>
+        <span class="cond"><strong>It can be a tool.</strong> The output can become a reusable local tool rather than a static answer.</span>
+      </li>
+    </ul>
+    <p class="stay-md">Inverse rule: stay in markdown when the answer is short, linear, or command-like.</p>
+  </section>
+
+  <section class="block" aria-labelledby="h-matrix">
+    <span class="sec-num">2.0 · Comparison matrix</span>
+    <h2 id="h-matrix">Markdown vs HTML, by situation</h2>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Situation</th>
+          <th scope="col">Markdown</th>
+          <th scope="col">HTML</th>
+          <th scope="col">Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sit">Comparing options side by side</td>
+          <td>Sequential sections; the reader scrolls back and forth to hold both in mind.</td>
+          <td>Columns, matrices, and decision panels put tradeoffs in one viewport.</td>
+          <td><span class="stamp html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="sit">Work with shape / architecture</td>
+          <td>ASCII diagrams and nested lists approximate structure, poorly.</td>
+          <td>Inline SVG flowcharts, module maps, ownership lanes, dependency graphs.</td>
+          <td><span class="stamp html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="sit">Meeting, PDF, or archive use</td>
+          <td>Renders differently per viewer; no layout control for print.</td>
+          <td>One self-contained file with print CSS; opens anywhere, archives intact.</td>
+          <td><span class="stamp html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="sit">Interaction needs</td>
+          <td>Static by definition; no tabs, filters, or collapsible detail.</td>
+          <td>Browser-native tabs, toggles, accordions, and export controls (per profile).</td>
+          <td><span class="stamp html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="sit">Reusable tool</td>
+          <td>An answer you read once.</td>
+          <td>A local editor, triage board, or tuner you keep and reopen.</td>
+          <td><span class="stamp html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="sit">Short, linear, or command-like answer</td>
+          <td>Instant to read, trivial to copy, fits the terminal it was born in.</td>
+          <td>Overhead with no payoff; the file ceremony adds nothing.</td>
+          <td><span class="stamp either">MARKDOWN</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="block" aria-labelledby="h-families">
+    <span class="sec-num">3.0 · Artifact families</span>
+    <h2 id="h-families">Nine families of HTML artifact</h2>
+    <div class="cells">
+      <div class="cell">
+        <span class="cell-num">F-01</span>
+        <h3>Exploration &amp; planning</h3>
+        <p>Side-by-side approaches, visual directions, implementation plans with milestones, data flow, risky code, gates, rollback.</p>
+      </div>
+      <div class="cell">
+        <span class="cell-num">F-02</span>
+        <h3>Code review &amp; understanding</h3>
+        <p>Annotated diffs, module maps, file tours, call graphs, reviewer focus lists, severity tags, jump links.</p>
+      </div>
+      <div class="cell">
+        <span class="cell-num">F-03</span>
+        <h3>Design</h3>
+        <p>Tokens, swatches, type scales, spacing systems, component variants, states, and accessibility notes as live surfaces.</p>
+      </div>
+      <div class="cell">
+        <span class="cell-num">F-04</span>
+        <h3>Prototyping</h3>
+        <p>Small clickable flows or animation sandboxes, only when interaction changes the decision. Exportable state if it edits.</p>
+      </div>
+      <div class="cell">
+        <span class="cell-num">F-05</span>
+        <h3>Diagrams</h3>
+        <p>Inline SVG flowcharts, architecture maps, lifecycle diagrams, figure sheets. Readable labels, no decorative complexity.</p>
+      </div>
+      <div class="cell">
+        <span class="cell-num">F-06</span>
+        <h3>Decks</h3>
+        <p>Section slides with arrow-key navigation, progress, print CSS, and dense meeting-ready copy.</p>
+      </div>
+      <div class="cell">
+        <span class="cell-num">F-07</span>
+        <h3>Research &amp; learning</h3>
+        <p>Explainers with TL;DR boxes, collapsible path steps, tabbed code samples, examples, glossary, and FAQ.</p>
+      </div>
+      <div class="cell">
+        <span class="cell-num">F-08</span>
+        <h3>Reports</h3>
+        <p>Status cards, small charts, timelines, proof snippets, shipped/slipped/carryover columns, next-action boards.</p>
+      </div>
+      <div class="cell">
+        <span class="cell-num">F-09</span>
+        <h3>Custom editors</h3>
+        <p>Local-only UI for manipulating data: triage boards, flag editors, prompt tuners, ordering tools. Always with copy/export.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-registers">
+    <span class="sec-num">4.0 · Design registers</span>
+    <h2 id="h-registers">Pick the register before colors</h2>
+    <div class="registers">
+      <div class="register">
+        <span class="meta">Operational</span>
+        <span>Dense, scannable, restrained, proof-forward.</span>
+      </div>
+      <div class="register">
+        <span class="meta">Product</span>
+        <span>Efficient repeated use, clear controls, stable states.</span>
+      </div>
+      <div class="register">
+        <span class="meta">Brand</span>
+        <span>Image-led or object-led, strong first viewport, memorable but not noisy.</span>
+      </div>
+      <div class="register">
+        <span class="meta">Learning</span>
+        <span>Calm hierarchy, examples, progressive detail, glossary.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-glossary">
+    <span class="sec-num">5.0 · Glossary</span>
+    <h2 id="h-glossary">Terms</h2>
+    <dl class="gloss">
+      <div>
+        <dt>Artifact</dt>
+        <dd>A single browser-ready HTML file produced from agent or repo context — a brief, plan, map, report, explainer, diagram, prototype, or editor. Stdout, made permanent.</dd>
+      </div>
+      <div>
+        <dt>Self-contained</dt>
+        <dd>Everything inline: CSS and any permitted JS live in the file. No external fonts, CDNs, assets, analytics, or build step unless the user explicitly asks.</dd>
+      </div>
+      <div>
+        <dt>Operator surface</dt>
+        <dd>The first viewport, designed for the person running the work: it must reveal the subject, current status, and where attention should go before any scrolling.</dd>
+      </div>
+      <div>
+        <dt>Validation profile</dt>
+        <dd>The rule set an artifact is checked against. <code>rich</code> for script-free documents, <code>app</code> for artifacts with legitimate inline interactivity, <code>deck</code> for slide decks.</dd>
+      </div>
+      <div>
+        <dt>Plate</dt>
+        <dd>The signature Hardcopy device: an engineering-drawing title block — a hairline grid of mono-uppercase cells (mode, source, date, counts) that opens documents and footers decks.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="block" aria-labelledby="h-faq">
+    <span class="sec-num">6.0 · FAQ</span>
+    <h2 id="h-faq">Questions agents and operators actually ask</h2>
+    <div class="faq">
+      <div class="qa">
+        <h3>Why not just markdown?</h3>
+        <p>Often you should — markdown is the correct format for short, linear, command-like answers, and htmlify says so explicitly. HTML replaces markdown only when the work is visual, spatial, comparative, interactive, or reusable in the browser. The five criteria in section 1.0 are the gate; if none apply, an HTML file is ceremony without payoff.</p>
+      </div>
+      <div class="qa">
+        <h3>Is the script ban absolute?</h3>
+        <p>No — it is per profile. The <code>rich</code> profile forbids scripts: explainers, briefs, reports, and plans should not need them. The <code>app</code> profile allows inline scripts for artifacts that legitimately carry interactivity — editors, prototypes, triage boards — provided the script is authored directly in the artifact. The <code>deck</code> profile covers slide decks with keyboard navigation. In all cases generated HTML is treated as untrusted until validated.</p>
+      </div>
+      <div class="qa">
+        <h3>Can I print these?</h3>
+        <p>Yes — print CSS is required for briefs, reports, plans, and decks, and recommended for anything meant to be shared, archived, or exported as PDF. Under Hardcopy, the paper turns white, crop marks render literally, the plate prints as the document header, and stamps stay grayscale-legible. This page carries its own <code>@media print</code> rules.</p>
+      </div>
+      <div class="qa">
+        <h3>What about my own design system?</h3>
+        <p>Yours wins. Hardcopy is the default visual identity, not a mandate: when a project supplies <code>DESIGN.md</code>, brand tokens, or an established design system, those are authoritative and the artifact should be styled with them instead.</p>
+      </div>
+      <div class="qa">
+        <h3>How do agents validate output?</h3>
+        <p>With the bundled validator, run before the final response. It checks for a standalone doctype/<code>html</code>/<code>body</code> structure, inline-only assets, profile-appropriate interactivity, and structural soundness. Every reported error must be fixed before the artifact ships; remaining warnings are reported to the user.</p>
+        <div class="well">
+          <div class="well-meta">shell</div>
+          <pre>npx -y @zakelfassi/htmlify htmlify-answer --validate artifact.html --profile rich</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="plate footer" aria-label="Document footer">
+    <div class="plate-cell">
+      <span class="plate-label">Generator</span>
+      <span class="plate-value">HTMLIFY · EXPLAINER</span>
+    </div>
+    <div class="plate-cell">
+      <span class="plate-label">Basis</span>
+      <span class="plate-value">REFERENCES/HTMLIFY-PRINCIPLES.MD</span>
+    </div>
+    <div class="plate-cell">
+      <span class="plate-label">Issued</span>
+      <span class="plate-value">2026-06-11</span>
+    </div>
+  </footer>
+</main>
+</body>
+</html>

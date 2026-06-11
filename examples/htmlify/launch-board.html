@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>htmlify v1.0.0 — Launch Board</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      /* Paper (light) */
+      --paper: #faf7f0;
+      --surface: #ffffff;
+      --ink: #1c1a15;
+      --ink-2: #6e6759;
+      --rule: #d9d2c3;
+      --rule-strong: #1c1a15;
+      --signal: #e84b0f;
+      --signal-wash: #fbeae1;
+      --ok: #2c7a52;
+      --warn: #a87514;
+      --risk: #b5341b;
+      --code-bg: #211e18;
+      --code-ink: #e8e2d4;
+      --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+      --mode-ink: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        /* Carbon (dark) */
+        --paper: #161410;
+        --surface: #1e1b16;
+        --ink: #ede8dc;
+        --ink-2: #a39a88;
+        --rule: #3a352b;
+        --rule-strong: #ede8dc;
+        --signal: #ff6b2c;
+        --signal-wash: #3a2114;
+        --ok: #5bbe8c;
+        --warn: #d9a93e;
+        --risk: #e2603f;
+        --code-bg: #0e0d0a;
+        --code-ink: #d8d2c4;
+        --mode-ink: #1c1a15;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--paper); }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 48px 28px 64px;
+    }
+    a { color: inherit; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+    a:hover { text-decoration-color: var(--signal); }
+
+    /* Crop marks */
+    .crop { position: fixed; width: 14px; height: 14px; pointer-events: none; z-index: 40; }
+    .crop::before, .crop::after { content: ""; position: absolute; background: var(--rule); }
+    .crop::before { width: 14px; height: 1px; }
+    .crop::after { width: 1px; height: 14px; }
+    .crop.tl { top: 10px; left: 10px; }
+    .crop.tr { top: 10px; right: 10px; }
+    .crop.bl { bottom: 10px; left: 10px; }
+    .crop.br { bottom: 10px; right: 10px; }
+    .crop.tr::before, .crop.br::before { right: 0; }
+    .crop.bl::before, .crop.br::before { bottom: 0; }
+    .crop.tr::after, .crop.br::after { right: 0; }
+    .crop.bl::after, .crop.br::after { bottom: 0; }
+
+    /* Metadata voice */
+    .eyebrow, .k, .sec-label, .hint, .owner, .count .l, .plate-footer, .num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+
+    .eyebrow { margin: 0 0 10px; }
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(34px, 5vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -0.015em;
+      margin: 0 0 24px;
+      font-weight: 600;
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+      margin: 6px 0 16px;
+      font-weight: 600;
+    }
+
+    /* The Plate */
+    .plate {
+      display: grid;
+      grid-template-columns: 1.2fr 1.1fr 0.7fr 0.9fr 1.6fr;
+      border: 2px solid var(--rule-strong);
+      margin: 0 0 28px;
+    }
+    .plate .cell {
+      padding: 8px 12px 10px;
+      border-left: 1px solid var(--rule);
+      min-width: 0;
+    }
+    .plate .cell:first-child { border-left: 0; }
+    .plate .k { display: block; margin-bottom: 2px; }
+    .plate .v {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink);
+      overflow-wrap: anywhere;
+    }
+    .plate .cell.mode { background: var(--signal); }
+    .plate .cell.mode .k { color: var(--mode-ink); opacity: 0.8; }
+    .plate .cell.mode .v { color: var(--mode-ink); }
+
+    /* Counts strip */
+    .counts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 2px solid var(--rule-strong);
+      border-bottom: 1px solid var(--rule);
+      margin: 0 0 18px;
+    }
+    .count {
+      padding: 12px 14px 14px;
+      border-left: 1px solid var(--rule);
+    }
+    .count:first-child { border-left: 0; }
+    .count .n {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: -0.015em;
+      font-variant-numeric: tabular-nums;
+    }
+    .count .l { display: block; margin-top: 4px; }
+    .count .l.st-done { color: var(--ok); }
+    .count .l.st-progress { color: var(--warn); }
+    .count .l.st-blocked { color: var(--risk); }
+    .count .l.st-todo { color: var(--ink-2); }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 34px;
+    }
+    .ctl {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid var(--rule-strong);
+      border-radius: 0;
+      padding: 6px 14px;
+      cursor: pointer;
+    }
+    .ctl:hover { background: var(--surface); }
+    .ctl:focus-visible, .stamp:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+    .hint { margin-left: 4px; }
+
+    /* Board */
+    .sec-label { margin: 0 0 4px; padding-top: 10px; border-top: 2px solid var(--rule-strong); }
+    .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+    .row {
+      display: grid;
+      grid-template-columns: 3ch minmax(0, 1fr) auto;
+      gap: 6px 16px;
+      align-items: center;
+      padding: 10px 2px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .num { padding-top: 2px; align-self: start; }
+    .item .label { display: block; font-weight: 600; }
+    .item .note { display: block; font-size: 13px; color: var(--ink-2); }
+    .owner { display: inline-block; margin-top: 2px; color: var(--risk); }
+
+    /* The Stamp */
+    .stamp {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1.5px solid currentColor;
+      border-radius: 2px;
+      padding: 2px 8px;
+      background: transparent;
+      cursor: pointer;
+      min-width: 112px;
+      text-align: center;
+      justify-self: end;
+    }
+    .stamp.st-todo { color: var(--ink-2); }
+    .stamp.st-progress { color: var(--warn); background: var(--signal-wash); }
+    .stamp.st-done { color: var(--ok); }
+    .stamp.st-blocked { color: var(--risk); }
+
+    /* Footer plate strip */
+    .plate-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 18px;
+      justify-content: space-between;
+      border-top: 2px solid var(--rule-strong);
+      margin-top: 40px;
+      padding-top: 10px;
+    }
+
+    @media (max-width: 720px) {
+      .plate { grid-template-columns: 1fr 1fr; }
+      .plate .cell { border-top: 1px solid var(--rule); }
+      .plate .cell:nth-child(-n+2) { border-top: 0; }
+      .plate .cell:nth-child(odd) { border-left: 0; }
+      .counts { grid-template-columns: 1fr 1fr; }
+      .count:nth-child(3) { border-left: 0; }
+      .count:nth-child(n+3) { border-top: 1px solid var(--rule); }
+      .row { grid-template-columns: 3ch minmax(0, 1fr); }
+      .row .stamp { grid-column: 2; justify-self: start; }
+    }
+
+    @media print {
+      :root { --paper: #ffffff; }
+      /* crop marks render literally; keep them */
+      .controls, .hint { display: none; }
+      .plate, .row, .counts { break-inside: avoid; }
+      .stamp { cursor: default; }
+      main { padding: 0; max-width: none; }
+      @page { margin: 14mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="crop tl" aria-hidden="true"></div>
+  <div class="crop tr" aria-hidden="true"></div>
+  <div class="crop bl" aria-hidden="true"></div>
+  <div class="crop br" aria-hidden="true"></div>
+
+  <main>
+    <section aria-labelledby="title">
+      <p class="eyebrow">htmlify · launch board · branch v1 · 2026-06-11</p>
+      <h1 id="title">v1.0.0 Launch Checklist</h1>
+
+      <header class="plate" role="group" aria-label="Title block">
+        <div class="cell mode">
+          <span class="k">Mode</span>
+          <span class="v">Prototype · Editor</span>
+        </div>
+        <div class="cell">
+          <span class="k">Board</span>
+          <span class="v">v1.0.0 Launch</span>
+        </div>
+        <div class="cell">
+          <span class="k">Items</span>
+          <span class="v">17</span>
+        </div>
+        <div class="cell">
+          <span class="k">Date</span>
+          <span class="v">2026-06-11</span>
+        </div>
+        <div class="cell">
+          <span class="k">Source</span>
+          <span class="v"><a href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a></span>
+        </div>
+      </header>
+    </section>
+
+    <section class="counts" aria-live="polite" aria-label="Status counts">
+      <div class="count"><span class="n" data-count="done">8/17</span><span class="l st-done">Done</span></div>
+      <div class="count"><span class="n" data-count="progress">1/17</span><span class="l st-progress">In Progress</span></div>
+      <div class="count"><span class="n" data-count="todo">6/17</span><span class="l st-todo">Todo</span></div>
+      <div class="count"><span class="n" data-count="blocked">2/17</span><span class="l st-blocked">Blocked</span></div>
+    </section>
+
+    <div class="controls">
+      <button type="button" class="ctl" id="export-json">Export JSON</button>
+      <button type="button" class="ctl" id="reset-board">Reset</button>
+      <span class="hint">Click a stamp to cycle status · state persists in this browser</span>
+    </div>
+
+    <section aria-labelledby="board-h">
+      <p class="sec-label">1.0 · Board Items</p>
+      <h2 id="board-h">Triage board</h2>
+      <ol class="rows" id="rows">
+        <li class="row">
+          <span class="num">01</span>
+          <div class="item">
+            <span class="label">Governance docs</span>
+            <span class="note">LICENSE · CONTRIBUTING · CODE_OF_CONDUCT · SECURITY</span>
+          </div>
+          <button type="button" class="stamp st-done" data-id="governance" data-item="Governance docs">Done</button>
+        </li>
+        <li class="row">
+          <span class="num">02</span>
+          <div class="item">
+            <span class="label">Biome / tsc tooling</span>
+            <span class="note">Lint, format, and typecheck wired into package scripts</span>
+          </div>
+          <button type="button" class="stamp st-done" data-id="tooling" data-item="Biome / tsc tooling">Done</button>
+        </li>
+        <li class="row">
+          <span class="num">03</span>
+          <div class="item">
+            <span class="label">src extraction</span>
+            <span class="note">Runtime split from index.js into src/ modules</span>
+          </div>
+          <button type="button" class="stamp st-done" data-id="src" data-item="src extraction">Done</button>
+        </li>
+        <li class="row">
+          <span class="num">04</span>
+          <div class="item">
+            <span class="label">JSDoc strict types</span>
+            <span class="note">checkJs strict pass with zero tsc errors</span>
+          </div>
+          <button type="button" class="stamp st-done" data-id="types" data-item="JSDoc strict types">Done</button>
+        </li>
+        <li class="row">
+          <span class="num">05</span>
+          <div class="item">
+            <span class="label">Skills restructure + deckify</span>
+            <span class="note">skills/htmlify and skills/deckify in agentskills.io layout</span>
+          </div>
+          <button type="button" class="stamp st-done" data-id="skills" data-item="Skills restructure + deckify">Done</button>
+        </li>
+        <li class="row">
+          <span class="num">06</span>
+          <div class="item">
+            <span class="label">--validate CLI</span>
+            <span class="note">htmlify-answer --validate with rich / app / deck profiles</span>
+          </div>
+          <button type="button" class="stamp st-done" data-id="validate" data-item="--validate CLI">Done</button>
+        </li>
+        <li class="row">
+          <span class="num">07</span>
+          <div class="item">
+            <span class="label">Hardcopy identity + theme reskin</span>
+            <span class="note">Tokens, plate, stamps, crop marks across renderer and docs</span>
+          </div>
+          <button type="button" class="stamp st-done" data-id="hardcopy" data-item="Hardcopy identity + theme reskin">Done</button>
+        </li>
+        <li class="row">
+          <span class="num">08</span>
+          <div class="item">
+            <span class="label">Plugin manifest</span>
+            <span class="note">.claude-plugin/plugin.json for Claude Code marketplaces</span>
+          </div>
+          <button type="button" class="stamp st-done" data-id="manifest" data-item="Plugin manifest">Done</button>
+        </li>
+        <li class="row">
+          <span class="num">09</span>
+          <div class="item">
+            <span class="label">Example gallery</span>
+            <span class="note">examples/htmlify/* — including this board</span>
+          </div>
+          <button type="button" class="stamp st-progress" data-id="gallery" data-item="Example gallery">In Progress</button>
+        </li>
+        <li class="row">
+          <span class="num">10</span>
+          <div class="item">
+            <span class="label">Landing page + Pages</span>
+            <span class="note">docs/ landing page deployed via GitHub Pages</span>
+          </div>
+          <button type="button" class="stamp st-todo" data-id="landing" data-item="Landing page + Pages">Todo</button>
+        </li>
+        <li class="row">
+          <span class="num">11</span>
+          <div class="item">
+            <span class="label">CI matrix rewrite</span>
+            <span class="note">Lint, typecheck, test across supported Node versions</span>
+          </div>
+          <button type="button" class="stamp st-todo" data-id="ci" data-item="CI matrix rewrite">Todo</button>
+        </li>
+        <li class="row">
+          <span class="num">12</span>
+          <div class="item">
+            <span class="label">release-please</span>
+            <span class="note">Automated version bumps and changelog PRs</span>
+          </div>
+          <button type="button" class="stamp st-todo" data-id="release" data-item="release-please">Todo</button>
+        </li>
+        <li class="row">
+          <span class="num">13</span>
+          <div class="item">
+            <span class="label">README rewrite</span>
+            <span class="note">Install matrix, validator docs, gallery links</span>
+          </div>
+          <button type="button" class="stamp st-todo" data-id="readme" data-item="README rewrite">Todo</button>
+        </li>
+        <li class="row">
+          <span class="num">14</span>
+          <div class="item">
+            <span class="label">Push + open PR</span>
+            <span class="note">Branch v1 → main</span>
+          </div>
+          <button type="button" class="stamp st-todo" data-id="pr" data-item="Push + open PR">Todo</button>
+        </li>
+        <li class="row">
+          <span class="num">15</span>
+          <div class="item">
+            <span class="label">Merge + release PR</span>
+            <span class="note">Merge v1, then land the release-please PR</span>
+          </div>
+          <button type="button" class="stamp st-todo" data-id="merge" data-item="Merge + release PR">Todo</button>
+        </li>
+        <li class="row">
+          <span class="num">16</span>
+          <div class="item">
+            <span class="label">npm publish</span>
+            <span class="note">Publish @zakelfassi/htmlify to the npm registry</span>
+            <span class="owner">Owner: Zak · needs NPM_TOKEN repo secret</span>
+          </div>
+          <button type="button" class="stamp st-blocked" data-id="npm" data-item="npm publish">Blocked</button>
+        </li>
+        <li class="row">
+          <span class="num">17</span>
+          <div class="item">
+            <span class="label">agentskills.io submission</span>
+            <span class="note">Submit the skill listing after the npm release</span>
+            <span class="owner">Owner: Zak · gated by npm publish</span>
+          </div>
+          <button type="button" class="stamp st-blocked" data-id="agentskills" data-item="agentskills.io submission">Blocked</button>
+        </li>
+      </ol>
+    </section>
+
+    <footer class="plate-footer">
+      <span>htmlify · launch-board · profile: app</span>
+      <span>storage key: htmlify-launch-board</span>
+      <span>generated 2026-06-11</span>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var KEY = 'htmlify-launch-board';
+      var ORDER = ['todo', 'progress', 'done', 'blocked'];
+      var STAMP_TEXT = { todo: 'Todo', progress: 'In Progress', done: 'Done', blocked: 'Blocked' };
+      var INITIAL = {
+        governance: 'done',
+        tooling: 'done',
+        src: 'done',
+        types: 'done',
+        skills: 'done',
+        validate: 'done',
+        hardcopy: 'done',
+        manifest: 'done',
+        gallery: 'progress',
+        landing: 'todo',
+        ci: 'todo',
+        release: 'todo',
+        readme: 'todo',
+        pr: 'todo',
+        merge: 'todo',
+        npm: 'blocked',
+        agentskills: 'blocked'
+      };
+      var TOTAL = Object.keys(INITIAL).length;
+
+      var stamps = Array.prototype.slice.call(document.querySelectorAll('button.stamp'));
+
+      function cloneInitial() {
+        var copy = {};
+        Object.keys(INITIAL).forEach(function (id) { copy[id] = INITIAL[id]; });
+        return copy;
+      }
+
+      function loadState() {
+        var fallback = cloneInitial();
+        try {
+          var raw = localStorage.getItem(KEY);
+          if (!raw) return fallback;
+          var parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object') return fallback;
+          Object.keys(fallback).forEach(function (id) {
+            if (ORDER.indexOf(parsed[id]) !== -1) fallback[id] = parsed[id];
+          });
+          return fallback;
+        } catch (err) {
+          return fallback;
+        }
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(KEY, JSON.stringify(state));
+        } catch (err) {
+          /* storage unavailable; board still works in-memory */
+        }
+      }
+
+      var state = loadState();
+
+      function paint() {
+        var counts = { todo: 0, progress: 0, done: 0, blocked: 0 };
+        stamps.forEach(function (btn) {
+          var id = btn.getAttribute('data-id');
+          var status = state[id];
+          counts[status] += 1;
+          btn.textContent = STAMP_TEXT[status];
+          btn.className = 'stamp st-' + status;
+          btn.setAttribute(
+            'aria-label',
+            btn.getAttribute('data-item') + ' — status ' + STAMP_TEXT[status] + '. Activate to cycle.'
+          );
+        });
+        ORDER.forEach(function (status) {
+          var cell = document.querySelector('[data-count="' + status + '"]');
+          if (cell) cell.textContent = counts[status] + '/' + TOTAL;
+        });
+      }
+
+      function cycle(id) {
+        var next = ORDER[(ORDER.indexOf(state[id]) + 1) % ORDER.length];
+        state[id] = next;
+        saveState();
+        paint();
+      }
+
+      stamps.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          cycle(btn.getAttribute('data-id'));
+        });
+      });
+
+      var resetBtn = document.getElementById('reset-board');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+          state = cloneInitial();
+          try { localStorage.removeItem(KEY); } catch (err) { /* noop */ }
+          paint();
+        });
+      }
+
+      var exportBtn = document.getElementById('export-json');
+      if (exportBtn) {
+        exportBtn.addEventListener('click', function () {
+          var items = stamps.map(function (btn) {
+            var id = btn.getAttribute('data-id');
+            return { id: id, item: btn.getAttribute('data-item'), status: state[id] };
+          });
+          var payload = {
+            board: 'htmlify v1.0.0 launch',
+            date: '2026-06-11',
+            storageKey: KEY,
+            exportedAt: new Date().toISOString(),
+            items: items
+          };
+          var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.href = url;
+          link.download = 'htmlify-launch-board.json';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        });
+      }
+
+      paint();
+    })();
+  </script>
+</body>
+</html>
