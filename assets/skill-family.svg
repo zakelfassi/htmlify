@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" role="img" aria-label="The htmlify skill family: htmlify for documents, deckify for presentation decks, one shared validated core">
+  <defs>
+    <style>
+      .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+      .serif { font-family: Georgia, 'Times New Roman', serif; }
+      .body { font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+    </style>
+  </defs>
+  <rect width="960" height="360" fill="#FAF7F0"/>
+  <g stroke="#6E6759" stroke-width="1.5" opacity="0.6" fill="none">
+    <path d="M12 26 V12 H26"/>
+    <path d="M934 12 H948 V26"/>
+    <path d="M948 334 V348 H934"/>
+    <path d="M26 348 H12 V334"/>
+  </g>
+
+  <!-- htmlify panel -->
+  <rect x="56" y="48" width="400" height="200" fill="#FFFFFF" stroke="#1C1A15" stroke-width="2.5"/>
+  <line x1="56" y1="92" x2="456" y2="92" stroke="#1C1A15" stroke-width="2"/>
+  <rect x="58" y="50" width="74" height="40" fill="#E84B0F"/>
+  <text x="95" y="75" class="mono" font-size="11" letter-spacing="1" fill="#FFFFFF" text-anchor="middle">SKILL</text>
+  <text x="148" y="77" class="serif" font-size="24" fill="#1C1A15">htmlify</text>
+  <g class="body" font-size="13" fill="#1C1A15">
+    <text x="76" y="122">Operator briefs · build plans · PR review packets</text>
+    <text x="76" y="146">Incident timelines · decision briefs · status reports</text>
+    <text x="76" y="170">Implementation maps · explainers · prototypes · editors</text>
+  </g>
+  <text x="76" y="216" class="mono" font-size="10" letter-spacing="1.2" fill="#6E6759">10 DOCUMENT MODES · PRINT-READY · ANNOTATABLE</text>
+
+  <!-- deckify panel -->
+  <rect x="504" y="48" width="400" height="200" fill="#FFFFFF" stroke="#1C1A15" stroke-width="2.5"/>
+  <line x1="504" y1="92" x2="904" y2="92" stroke="#1C1A15" stroke-width="2"/>
+  <rect x="506" y="50" width="74" height="40" fill="#1C1A15"/>
+  <text x="543" y="75" class="mono" font-size="11" letter-spacing="1" fill="#FAF7F0" text-anchor="middle">SKILL</text>
+  <text x="596" y="77" class="serif" font-size="24" fill="#1C1A15">deckify</text>
+  <g class="body" font-size="13" fill="#1C1A15">
+    <text x="524" y="122">Talk decks · workshop decks · essay decks</text>
+    <text x="524" y="146">Demo decks · launch decks · teaching guides</text>
+    <text x="524" y="170">Speaker notes · run-of-show · downloadable guide/PDF</text>
+  </g>
+  <text x="524" y="216" class="mono" font-size="10" letter-spacing="1.2" fill="#6E6759">6 DECK MODES · KEYBOARD NAV · 40–60% VISUAL</text>
+
+  <!-- shared core -->
+  <g stroke="#1C1A15" stroke-width="1.5" fill="none">
+    <path d="M256 248 V276"/>
+    <path d="M704 248 V276"/>
+  </g>
+  <rect x="146" y="276" width="668" height="48" rx="2" fill="#211E18"/>
+  <text x="480" y="296" class="mono" font-size="11" letter-spacing="1.5" fill="#E8E2D4" text-anchor="middle">SHARED CORE · htmlify-answer --validate · RICH / APP / DECK PROFILES</text>
+  <text x="480" y="313" class="mono" font-size="10" letter-spacing="1.2" fill="#A39A88" text-anchor="middle">ZERO DEPENDENCIES · ZERO BUILD · ONE SELF-CONTAINED FILE</text>
+</svg>

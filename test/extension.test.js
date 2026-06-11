@@ -10,6 +10,10 @@ const packageJson = require('../package.json');
 const extension = require('../index.js');
 const internals = extension._internals;
 
+/**
+ * @param {string} body
+ * @param {string} [head]
+ */
 function richDocument(body, head = '<meta charset="utf-8" /><style>body{font-family:system-ui}</style>') {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -18,6 +22,9 @@ function richDocument(body, head = '<meta charset="utf-8" /><style>body{font-fam
 </html>`;
 }
 
+/**
+ * @param {(tempDir: string) => Promise<any>} fn
+ */
 async function withTempExportRoot(fn) {
   const previous = process.env.HTMLIFY_EXPORT_ROOT;
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'htmlify-test-'));
@@ -34,6 +41,13 @@ async function withTempExportRoot(fn) {
   }
 }
 
+/**
+ * @param {string} scriptPath
+ * @param {string[]} args
+ * @param {string} input
+ * @param {Record<string, string>} [env]
+ * @returns {Promise<{ code: number | null, stdout: string, stderr: string }>}
+ */
 function runNodeScript(scriptPath, args, input, env = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [scriptPath, ...(args || [])], {
@@ -43,8 +57,12 @@ function runNodeScript(scriptPath, args, input, env = {}) {
     });
     let stdout = '';
     let stderr = '';
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString('utf8');
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString('utf8');
+    });
     child.on('error', reject);
     child.on('close', (code) => {
       resolve({ code, stdout, stderr });
@@ -63,7 +81,16 @@ test('package metadata preserves npm Pi and OMP entry contracts', () => {
   assert.ok(packageJson.keywords.includes('pi-package'));
   assert.ok(packageJson.keywords.includes('pi-extension'));
   assert.ok(packageJson.keywords.includes('agentskills'));
-  assert.deepEqual(packageJson.files, ['SKILL.md', 'bin/', 'hooks/', 'index.js', 'README.md', 'assets/', 'references/']);
+  assert.deepEqual(packageJson.files, [
+    'index.js',
+    'src/',
+    'bin/',
+    'hooks/',
+    'skills/',
+    '.claude-plugin/',
+    'assets/',
+    'README.md',
+  ]);
   assert.ok(packageJson.scripts.test.includes('node --test'));
 
   for (const entry of [packageJson.main, packageJson.pi.extensions[0], packageJson.omp.extensions[0]]) {
@@ -85,12 +112,23 @@ test('manifest entries load the same extension factory shape', () => {
 
 test('extension registers commands/events and handles long assistant messages', async () => {
   assert.doesNotThrow(() => extension({}));
-  assert.doesNotThrow(() => extension({ setLabel: () => { throw new Error('not initialized'); } }));
+  assert.doesNotThrow(() =>
+    extension({
+      setLabel: () => {
+        throw new Error('not initialized');
+      },
+    })
+  );
 
+  /** @type {string[]} */
   const labels = [];
+  /** @type {Map<string, any>} */
   const events = new Map();
+  /** @type {Map<string, any>} */
   const commands = new Map();
+  /** @type {Array<{ type: string, data: any }>} */
   const entries = [];
+  /** @type {string[]} */
   const notifications = [];
   extension({
     setLabel: (label) => labels.push(label),
@@ -112,30 +150,42 @@ test('extension registers commands/events and handles long assistant messages', 
   assert.equal(typeof commands.get('html-comments').handler, 'function');
   assert.equal(typeof commands.get('htmlify-comments').handler, 'function');
 
-  const inputResult = await events.get('input')({ text: '/html-last' }, {
-    ui: { notify: (message) => notifications.push(message) },
-  });
+  const inputResult = await events.get('input')(
+    { text: '/html-last' },
+    {
+      ui: { notify: (/** @type {string} */ message) => notifications.push(message) },
+    }
+  );
   assert.deepEqual(inputResult, { handled: true, action: 'handled' });
 
   const commandResult = commands.get('html-last').handler('', {
-    ui: { notify: (message) => notifications.push(message) },
+    ui: { notify: (/** @type {string} */ message) => notifications.push(message) },
   });
   assert.equal(commandResult, undefined);
   await Promise.resolve();
-  assert.equal(notifications.some((message) => message.includes('No eligible assistant answer')), true);
+  assert.equal(
+    notifications.some((message) => message.includes('No eligible assistant answer')),
+    true
+  );
 
   const longText = `# Captured Answer\n\n${'This answer is long enough to trigger capture. '.repeat(80)}`;
-  await events.get('message_end')({ message: { role: 'assistant', text: longText } }, {
-    hasUI: true,
-    ui: { notify: (message) => notifications.push(message) },
-  });
+  await events.get('message_end')(
+    { message: { role: 'assistant', text: longText } },
+    {
+      hasUI: true,
+      ui: { notify: (/** @type {string} */ message) => notifications.push(message) },
+    }
+  );
 
   const sourceEntry = entries.find((entry) => entry.type === 'html-long-answer-source');
   assert.ok(sourceEntry);
   assert.equal(typeof sourceEntry.data.id, 'string');
   assert.equal(sourceEntry.data.text, undefined);
   assert.equal(sourceEntry.data.stats.characters, longText.trim().length);
-  assert.equal(notifications.some((message) => message.includes('Long answer captured for HTML export')), false);
+  assert.equal(
+    notifications.some((message) => message.includes('Long answer captured for HTML export')),
+    false
+  );
 });
 
 test('/html-last choose falls back to local export when chooser is unavailable', async () => {
@@ -144,9 +194,13 @@ test('/html-last choose falls back to local export when chooser is unavailable',
     process.env.HTMLIFY_SKIP_OPEN = '1';
 
     try {
+      /** @type {Map<string, any>} */
       const events = new Map();
+      /** @type {Array<{ type: string, data: any }>} */
       const entries = [];
+      /** @type {string[]} */
       const notifications = [];
+      /** @type {string[]} */
       const sentMessages = [];
       extension({
         on: (eventName, handler) => events.set(eventName, handler),
@@ -156,17 +210,28 @@ test('/html-last choose falls back to local export when chooser is unavailable',
 
       const longText = `# Captured Answer\n\n${'This answer is long enough to trigger capture. '.repeat(80)}`;
       await events.get('message_end')({ message: { role: 'assistant', text: longText } }, { hasUI: true, ui: {} });
-      await events.get('input')({ text: '/html-last choose' }, {
-        hasUI: true,
-        ui: {
-          select: () => { throw new Error('chooser unavailable'); },
-          notify: (message) => notifications.push(message),
-        },
-      });
+      await events.get('input')(
+        { text: '/html-last choose' },
+        {
+          hasUI: true,
+          ui: {
+            select: () => {
+              throw new Error('chooser unavailable');
+            },
+            notify: (/** @type {string} */ message) => notifications.push(message),
+          },
+        }
+      );
 
       assert.equal(sentMessages.length, 0);
-      assert.equal(entries.some((entry) => entry.type === 'html-long-answer-export' && entry.data.mode === 'local'), true);
-      assert.equal(notifications.some((message) => message.includes('HTML export written')), true);
+      assert.equal(
+        entries.some((entry) => entry.type === 'html-long-answer-export' && entry.data.mode === 'local'),
+        true
+      );
+      assert.equal(
+        notifications.some((message) => message.includes('HTML export written')),
+        true
+      );
     } finally {
       if (previousSkipOpen === undefined) {
         delete process.env.HTMLIFY_SKIP_OPEN;
@@ -205,7 +270,10 @@ test('local export preserves shell and representative markdown-ish rendering', a
     assert.match(html, /href="https:\/\/example\.com"/);
     assert.match(html, /<h2 data-commentable="true" data-block-id="b-1">Local Export Title<\/h2>/);
     assert.match(html, /<code>inlineCode<\/code>/);
-    assert.match(html, /<ul><li data-commentable="true" data-block-id="b-3">first item<\/li><li data-commentable="true" data-block-id="b-4">second item<\/li><\/ul>/);
+    assert.match(
+      html,
+      /<ul><li data-commentable="true" data-block-id="b-3">first item<\/li><li data-commentable="true" data-block-id="b-4">second item<\/li><\/ul>/
+    );
     assert.match(html, /<table data-commentable="true" data-block-id="b-5">/);
     assert.equal((html.match(/<script/gi) || []).length, 1);
     assert.match(html, /htmlify trusted annotation layer/);
@@ -267,7 +335,10 @@ test('rich validation rejects dangerous or over-large HTML', () => {
   ];
 
   for (const html of invalidCases) {
-    assert.throws(() => internals.validateRichHtmlDocument(html), /Rich HTML output|blocked|event-handler|javascript|external|meta refresh|exceeded|standalone/);
+    assert.throws(
+      () => internals.validateRichHtmlDocument(html),
+      /Rich HTML output|blocked|event-handler|javascript|external|meta refresh|exceeded|standalone/
+    );
   }
 });
 
@@ -312,40 +383,57 @@ test('rich extraction and command mode parsing are deterministic', () => {
   assert.deepEqual(internals.parseHtmlLastInput(' /htmlify-version '), { command: 'version', args: '' });
   assert.deepEqual(internals.parseHtmlLastInput('/htmlify gemini'), { command: 'export', args: 'gemini' });
   assert.equal(internals.parseHtmlLastInput('/html-lastly'), null);
-  assert.deepEqual(internals.parseHtmlLastInput('/html-comments comments.json'), { command: 'comments', args: 'comments.json' });
-  assert.deepEqual(internals.parseHtmlLastInput('/htmlify-comments comments.json'), { command: 'comments', args: 'comments.json' });
+  assert.deepEqual(internals.parseHtmlLastInput('/html-comments comments.json'), {
+    command: 'comments',
+    args: 'comments.json',
+  });
+  assert.deepEqual(internals.parseHtmlLastInput('/htmlify-comments comments.json'), {
+    command: 'comments',
+    args: 'comments.json',
+  });
   assert.equal(internals.resolveForcedExportMode('designed'), 'rich-pi');
   assert.equal(internals.resolveForcedExportMode(''), null);
 });
 
 test('comment bundles validate and produce deterministic agent prompt', () => {
-  const bundle = internals.validateCommentBundle({
-    version: 1,
-    sourceId: 'source-a',
-    title: 'Reviewed Export',
-    exportUrl: 'file:///tmp/export.html',
-    comments: [{
-      id: 'c1',
-      blockId: 'b-2',
-      selectedText: 'selected claim',
-      prefix: 'before',
-      suffix: 'after',
-      comment: 'Please tighten this.',
-      createdAt: '2026-05-05T00:00:00.000Z',
-    }],
-  }, 'source-a');
+  const bundle = internals.validateCommentBundle(
+    {
+      version: 1,
+      sourceId: 'source-a',
+      title: 'Reviewed Export',
+      exportUrl: 'file:///tmp/export.html',
+      comments: [
+        {
+          id: 'c1',
+          blockId: 'b-2',
+          selectedText: 'selected claim',
+          prefix: 'before',
+          suffix: 'after',
+          comment: 'Please tighten this.',
+          createdAt: '2026-05-05T00:00:00.000Z',
+        },
+      ],
+    },
+    'source-a'
+  );
 
   const prompt = internals.buildCommentsPrompt(bundle);
   assert.match(prompt, /I reviewed the HTML export/);
   assert.match(prompt, /Source ID: source-a/);
   assert.match(prompt, /> selected claim/);
   assert.match(prompt, /Please tighten this\./);
-  assert.throws(() => internals.validateCommentBundle({ version: 1, sourceId: 'other', comments: [] }, 'source-a'), /does not match/);
+  assert.throws(
+    () => internals.validateCommentBundle({ version: 1, sourceId: 'other', comments: [] }, 'source-a'),
+    /does not match/
+  );
 });
 
 test('/html-comments accepts pasted JSON without collapsing comment text', async () => {
+  /** @type {Map<string, any>} */
   const events = new Map();
+  /** @type {string[]} */
   const sentMessages = [];
+  /** @type {string[]} */
   const notifications = [];
   extension({
     on: (eventName, handler) => events.set(eventName, handler),
@@ -357,22 +445,30 @@ test('/html-comments accepts pasted JSON without collapsing comment text', async
     version: 1,
     sourceId: 'source-a',
     title: 'Reviewed Export',
-    comments: [{
-      selectedText: 'selected claim',
-      prefix: 'before',
-      suffix: 'after',
-      comment: 'Keep  two   spaces\nand this newline.',
-    }],
+    comments: [
+      {
+        selectedText: 'selected claim',
+        prefix: 'before',
+        suffix: 'after',
+        comment: 'Keep  two   spaces\nand this newline.',
+      },
+    ],
   };
 
-  const result = await events.get('input')({ text: `/html-comments ${JSON.stringify(bundle, null, 2)}` }, {
-    ui: { notify: (message) => notifications.push(message) },
-  });
+  const result = await events.get('input')(
+    { text: `/html-comments ${JSON.stringify(bundle, null, 2)}` },
+    {
+      ui: { notify: (/** @type {string} */ message) => notifications.push(message) },
+    }
+  );
 
   assert.deepEqual(result, { handled: true, action: 'handled' });
   assert.equal(sentMessages.length, 1);
-  assert.match(sentMessages[0], /Keep  two   spaces\nand this newline\./);
-  assert.equal(notifications.some((message) => message.includes('Queued 1 HTML comment')), true);
+  assert.match(sentMessages[0], /Keep {2}two {3}spaces\nand this newline\./);
+  assert.equal(
+    notifications.some((message) => message.includes('Queued 1 HTML comment')),
+    true
+  );
 });
 
 test('htmlify-answer CLI writes a self-contained export from stdin', async () => {

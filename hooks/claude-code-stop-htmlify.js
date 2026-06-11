@@ -3,13 +3,12 @@
 const path = require('path');
 const htmlify = require('../index.js');
 
-const {
-  renderMarkdownish,
-  writeHtmlArtifact,
-} = htmlify._internals;
+const { renderMarkdownish, writeHtmlArtifact } = htmlify._internals;
 
+/** @returns {Promise<string>} */
 function readStdin() {
   return new Promise((resolve, reject) => {
+    /** @type {Buffer[]} */
     const chunks = [];
     process.stdin.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
     process.stdin.on('error', reject);
@@ -17,9 +16,20 @@ function readStdin() {
   });
 }
 
+/**
+ * @param {any} text
+ * @returns {string}
+ */
 function titleFrom(text) {
-  const first = String(text || '').split(/\r?\n/).find((line) => line.trim());
-  return first ? first.trim().replace(/^#+\s*/, '').slice(0, 120) : 'Claude Code answer';
+  const first = String(text || '')
+    .split(/\r?\n/)
+    .find((line) => line.trim());
+  return first
+    ? first
+        .trim()
+        .replace(/^#+\s*/, '')
+        .slice(0, 120)
+    : 'Claude Code answer';
 }
 
 async function main() {
@@ -46,10 +56,12 @@ async function main() {
     mode: 'claude-code-stop-hook',
   });
 
-  process.stdout.write(JSON.stringify({
-    systemMessage: `htmlify wrote a long-answer HTML artifact: ${filePath}`,
-    suppressOutput: false,
-  }));
+  process.stdout.write(
+    JSON.stringify({
+      systemMessage: `htmlify wrote a long-answer HTML artifact: ${filePath}`,
+      suppressOutput: false,
+    })
+  );
 }
 
 main().catch((error) => {

@@ -1,0 +1,13 @@
+{
+  "name": "htmlify",
+  "version": "0.3.1",
+  "description": "Turn agent answers into self-contained HTML artifacts and presentation decks (htmlify + deckify skills, plus an optional long-answer Stop hook).",
+  "author": {
+    "name": "Zak El Fassi",
+    "url": "https://github.com/zakelfassi"
+  },
+  "homepage": "https://zakelfassi.github.io/htmlify/",
+  "repository": "https://github.com/zakelfassi/htmlify",
+  "license": "Apache-2.0",
+  "keywords": ["html", "artifacts", "decks", "reports", "skills"]
+}

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Decision Brief — How should deckify be combined with htmlify?</title>
+<style>
+:root {
+  color-scheme: light dark;
+  /* Paper (light) */
+  --paper: #faf7f0;
+  --surface: #ffffff;
+  --ink: #1c1a15;
+  --ink-2: #6e6759;
+  --rule: #d9d2c3;
+  --rule-strong: #1c1a15;
+  --signal: #e84b0f;
+  --signal-wash: #fbeae1;
+  --ok: #2c7a52;
+  --warn: #a87514;
+  --risk: #b5341b;
+  --code-bg: #211e18;
+  --code-ink: #e8e2d4;
+  --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Carbon (dark) */
+    --paper: #161410;
+    --surface: #1e1b16;
+    --ink: #ede8dc;
+    --ink-2: #a39a88;
+    --rule: #3a352b;
+    --rule-strong: #ede8dc;
+    --signal: #ff6b2c;
+    --signal-wash: #3a2114;
+    --ok: #5bbe8c;
+    --warn: #d9a93e;
+    --risk: #e2603f;
+    --code-bg: #0e0d0a;
+    --code-ink: #d8d2c4;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+}
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 48px 32px 72px;
+}
+
+/* ---------- Crop marks ---------- */
+.crop { position: fixed; width: 14px; height: 14px; pointer-events: none; z-index: 10; }
+.crop::before, .crop::after { content: ""; position: absolute; background: var(--rule); }
+.crop::before { width: 14px; height: 1px; }
+.crop::after { width: 1px; height: 14px; }
+.crop.tl { top: 10px; left: 10px; }
+.crop.tl::before { top: 0; left: 0; } .crop.tl::after { top: 0; left: 0; }
+.crop.tr { top: 10px; right: 10px; }
+.crop.tr::before { top: 0; right: 0; } .crop.tr::after { top: 0; right: 0; }
+.crop.bl { bottom: 10px; left: 10px; }
+.crop.bl::before { bottom: 0; left: 0; } .crop.bl::after { bottom: 0; left: 0; }
+.crop.br { bottom: 10px; right: 10px; }
+.crop.br::before { bottom: 0; right: 0; } .crop.br::after { bottom: 0; right: 0; }
+
+/* ---------- Type voices ---------- */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1.05; }
+h2 { font-size: 26px; line-height: 1.15; margin: 10px 0 0; }
+.meta, .eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+}
+.measure { max-width: 72ch; }
+p { margin: 12px 0; }
+
+/* ---------- The Plate ---------- */
+.plate {
+  border: 2px solid var(--rule-strong);
+  display: grid;
+  grid-template-columns: 1fr 1.6fr 1.1fr 0.9fr 1.4fr;
+  margin: 28px 0 0;
+}
+.plate .cell {
+  padding: 10px 12px;
+  border-left: 1px solid var(--rule);
+  min-width: 0;
+}
+.plate .cell:first-child { border-left: none; }
+.plate .cell .label {
+  display: block;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  margin-bottom: 3px;
+}
+.plate .cell .value {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  word-break: break-word;
+}
+.plate .cell.mode {
+  background: var(--signal);
+  color: #fff;
+}
+.plate .cell.mode .label { color: rgba(255,255,255,0.75); }
+@media (prefers-color-scheme: dark) {
+  .plate .cell.mode { color: #1c1a15; }
+  .plate .cell.mode .label { color: rgba(28,26,21,0.7); }
+}
+@media (max-width: 760px) {
+  .plate { grid-template-columns: 1fr 1fr; }
+  .plate .cell { border-top: 1px solid var(--rule); }
+  .plate .cell:nth-child(-n+2) { border-top: none; }
+  .plate .cell:nth-child(odd) { border-left: none; }
+  .plate .cell:nth-child(even) { border-left: 1px solid var(--rule); }
+}
+
+/* ---------- Sections ---------- */
+section { margin-top: 52px; }
+.sec-head {
+  border-top: 2px solid var(--rule-strong);
+  padding-top: 8px;
+}
+.sec-head .num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* ---------- Stamps ---------- */
+.stamp {
+  display: inline-block;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  padding: 2px 8px;
+  background: transparent;
+}
+.stamp.ok { color: var(--ok); }
+.stamp.warn { color: var(--warn); }
+.stamp.risk { color: var(--risk); }
+.stamp.signal { color: var(--signal); background: var(--signal-wash); }
+
+/* ---------- Options matrix ---------- */
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  border: 2px solid var(--rule-strong);
+  margin-top: 20px;
+  font-size: 14px;
+}
+.matrix th, .matrix td {
+  border: 1px solid var(--rule);
+  padding: 10px 12px;
+  vertical-align: top;
+  text-align: left;
+}
+.matrix thead th {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  color: var(--ink-2);
+  border-bottom: 2px solid var(--rule-strong);
+}
+.matrix thead th .opt-name {
+  display: block;
+  font-family: var(--font-display);
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-size: 17px;
+  color: var(--ink);
+  margin-top: 4px;
+}
+.matrix tbody th {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap;
+  width: 84px;
+}
+.matrix ul { margin: 0; padding-left: 16px; }
+.matrix li { margin: 2px 0; }
+.matrix .chosen { border-left: 2px solid var(--signal); }
+.matrix col.col-a { width: 32%; }
+@media (max-width: 700px) {
+  .matrix { font-size: 13px; }
+  .matrix th, .matrix td { padding: 7px 8px; }
+}
+
+/* ---------- Criteria rows ---------- */
+.criteria { border-top: 2px solid var(--rule-strong); margin-top: 20px; }
+.criteria .row {
+  display: grid;
+  grid-template-columns: 56px 240px 1fr;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.criteria .row .idx { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--ink-2); padding-top: 3px; }
+.criteria .row .name { font-weight: 600; }
+.criteria .row .read { color: var(--ink-2); }
+@media (max-width: 700px) {
+  .criteria .row { grid-template-columns: 48px 1fr; }
+  .criteria .row .read { grid-column: 2; }
+}
+
+/* ---------- Decision panel ---------- */
+.decision-panel {
+  border: 2px solid var(--rule-strong);
+  margin-top: 24px;
+}
+.decision-panel .dp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+}
+.decision-panel .dp-body { padding: 16px; }
+.decision-panel .dp-body h3 {
+  font-size: 22px;
+  line-height: 1.15;
+  margin: 0 0 8px;
+}
+.decision-panel .dp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--rule);
+}
+.decision-panel .dp-grid .cell {
+  padding: 10px 16px;
+  border-left: 1px solid var(--rule);
+}
+.decision-panel .dp-grid .cell:first-child { border-left: none; }
+.decision-panel .dp-grid .label {
+  display: block;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  margin-bottom: 2px;
+}
+.decision-panel .dp-grid .value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 700px) {
+  .decision-panel .dp-grid { grid-template-columns: 1fr; }
+  .decision-panel .dp-grid .cell { border-left: none; border-top: 1px solid var(--rule); }
+  .decision-panel .dp-grid .cell:first-child { border-top: none; }
+}
+
+/* ---------- Consequence / migration cells ---------- */
+.cellgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--rule);
+  border-top: 2px solid var(--rule-strong);
+  margin-top: 20px;
+}
+.cellgrid .cg {
+  padding: 14px 16px;
+  border-left: 1px solid var(--rule);
+  border-top: 1px solid var(--rule);
+}
+.cellgrid .cg:nth-child(-n+2) { border-top: none; }
+.cellgrid .cg:nth-child(odd) { border-left: none; }
+.cellgrid .cg .cg-label {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+.cellgrid .cg p { margin: 0; font-size: 14px; }
+@media (max-width: 700px) {
+  .cellgrid { grid-template-columns: 1fr; }
+  .cellgrid .cg { border-left: none; border-top: 1px solid var(--rule); }
+  .cellgrid .cg:first-child { border-top: none; }
+}
+
+/* ---------- Carbon well ---------- */
+.well {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-radius: 2px;
+  margin-top: 14px;
+  overflow-x: auto;
+}
+.well .well-meta {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #8d8675;
+  padding: 7px 14px;
+  border-bottom: 1px solid #35312a;
+}
+.well pre {
+  margin: 0;
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+/* ---------- Revisit triggers ---------- */
+.triggers { border-top: 2px solid var(--rule-strong); margin-top: 20px; }
+.triggers .row {
+  display: grid;
+  grid-template-columns: 56px 1fr 200px;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+  align-items: start;
+}
+.triggers .row .idx { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--ink-2); padding-top: 3px; }
+.triggers .row .then { font-family: var(--font-mono); text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; color: var(--ink-2); padding-top: 3px; }
+@media (max-width: 700px) {
+  .triggers .row { grid-template-columns: 48px 1fr; }
+  .triggers .row .then { grid-column: 2; }
+}
+
+/* ---------- Footer plate ---------- */
+.footer-plate {
+  margin-top: 64px;
+  border-top: 2px solid var(--rule-strong);
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+a { color: inherit; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--signal); }
+
+/* ---------- Print ---------- */
+@media print {
+  :root { --paper: #ffffff; }
+  body { font-size: 12.5px; }
+  main { padding: 0; max-width: none; }
+  .crop { position: absolute; }
+  .plate, .decision-panel, .matrix { break-inside: avoid; }
+  .well { border: 1px solid var(--rule); }
+  .stamp { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .plate .cell.mode { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 14mm; }
+}
+</style>
+</head>
+<body>
+<div class="crop tl" aria-hidden="true"></div>
+<div class="crop tr" aria-hidden="true"></div>
+<div class="crop bl" aria-hidden="true"></div>
+<div class="crop br" aria-hidden="true"></div>
+
+<main>
+  <section aria-labelledby="title" style="margin-top:0">
+    <p class="eyebrow">Decision-Brief · htmlify · 2026-06-11</p>
+    <h1 id="title">How should deckify be combined with htmlify?</h1>
+    <p class="measure">Packaging decision for the 1.0 open-source release: where the deckify presentation skill lives relative to the htmlify document skill, and what that means for installation, maintenance, and the shared runtime.</p>
+
+    <div class="plate" role="table" aria-label="Title block">
+      <div class="cell mode" role="cell">
+        <span class="label">Mode</span>
+        <span class="value">Decision-Brief</span>
+      </div>
+      <div class="cell" role="cell">
+        <span class="label">Decision</span>
+        <span class="value">deckify packaging</span>
+      </div>
+      <div class="cell" role="cell">
+        <span class="label">Status</span>
+        <span class="value">Decided · Option A</span>
+      </div>
+      <div class="cell" role="cell">
+        <span class="label">Date</span>
+        <span class="value">2026-06-11</span>
+      </div>
+      <div class="cell" role="cell">
+        <span class="label">Source</span>
+        <span class="value">github.com/zakelfassi/htmlify</span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="sec-context">
+    <div class="sec-head">
+      <span class="num">1.0 · Context</span>
+      <h2 id="sec-context">Where the two skills stood before 1.0</h2>
+    </div>
+    <p class="measure">deckify existed only as a divergent local <code>SKILL.md</code> fork of htmlify 0.3.1 on the author's machine — unversioned, untested, unpublished. htmlify was a single-skill repository with its <code>SKILL.md</code> at the repo root. The goal: a launch-grade 1.0 open-source release that gives deckify a real home without compromising either skill.</p>
+    <div class="cellgrid">
+      <div class="cg">
+        <div class="cg-label">htmlify · before</div>
+        <p>Single-skill repo, <code>SKILL.md</code> at root, published as one npm package with the <code>--validate</code> CLI, hooks, and Pi/OMP runtime.</p>
+      </div>
+      <div class="cg">
+        <div class="cg-label">deckify · before</div>
+        <p>Local-only fork of htmlify 0.3.1, drifted from upstream, no CI, no release flow, no distribution path. <span class="stamp risk">UNVERSIONED</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="sec-options">
+    <div class="sec-head">
+      <span class="num">2.0 · Options</span>
+      <h2 id="sec-options">Three packaging shapes considered</h2>
+    </div>
+    <table class="matrix">
+      <colgroup><col style="width:84px" /><col class="col-a" /><col /><col /></colgroup>
+      <thead>
+        <tr>
+          <th scope="col"></th>
+          <th scope="col" class="chosen">Option A — chosen
+            <span class="opt-name">Monorepo skill family</span></th>
+          <th scope="col">Option B
+            <span class="opt-name">Fold into one SKILL.md</span></th>
+          <th scope="col">Option C
+            <span class="opt-name">Two repos</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Shape</th>
+          <td class="chosen"><code>skills/htmlify</code> + <code>skills/deckify</code> in one repo, one npm package, shared runtime and validator.</td>
+          <td>deckify becomes a “deck mode” section inside htmlify's single <code>SKILL.md</code>.</td>
+          <td>Separate deckify repo depending on htmlify.</td>
+        </tr>
+        <tr>
+          <th scope="row">Pros</th>
+          <td class="chosen"><ul>
+            <li>One CI / release / docs surface</li>
+            <li>deckify gets versioned, tested, published</li>
+            <li>Shared <code>--validate</code> CLI becomes a real common core</li>
+          </ul></td>
+          <td><ul>
+            <li>Simplest possible change</li>
+          </ul></td>
+          <td><ul>
+            <li>Cleanest separation of concerns</li>
+          </ul></td>
+        </tr>
+        <tr>
+          <th scope="row">Cons</th>
+          <td class="chosen"><ul>
+            <li><strong>Breaking:</strong> root <code>SKILL.md</code> removed; existing clones must re-install pointing at <code>skills/htmlify</code></li>
+            <li>Slightly larger package</li>
+          </ul></td>
+          <td><ul>
+            <li>Bloats one <code>SKILL.md</code></li>
+            <li>Weakens deckify's trigger-matching / discoverability in agents</li>
+            <li>Loses distinct identity</li>
+          </ul></td>
+          <td><ul>
+            <li>Doubles maintenance surface: two CIs, READMEs, release flows</li>
+            <li>All that for one file of divergence</li>
+          </ul></td>
+        </tr>
+        <tr>
+          <th scope="row">Cost</th>
+          <td class="chosen">One-time migration at the 1.0 boundary; entry points unchanged.</td>
+          <td>Ongoing discoverability tax on every agent session.</td>
+          <td>Ongoing 2× release and docs overhead, forever.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="sec-criteria">
+    <div class="sec-head">
+      <span class="num">3.0 · Criteria</span>
+      <h2 id="sec-criteria">What the options were weighed against</h2>
+    </div>
+    <div class="criteria">
+      <div class="row">
+        <span class="idx">3.1</span>
+        <span class="name">Maintenance surface</span>
+        <span class="read">One CI, one release flow, one docs site beats two of each. Favors A; disqualifies C's standing overhead.</span>
+      </div>
+      <div class="row">
+        <span class="idx">3.2</span>
+        <span class="name">Skill discoverability</span>
+        <span class="read">Agents trigger-match on distinct skill descriptions. A separate deckify <code>SKILL.md</code> keeps deck requests routing correctly; B buries them.</span>
+      </div>
+      <div class="row">
+        <span class="idx">3.3</span>
+        <span class="name">Version / test coverage for deckify</span>
+        <span class="read">deckify must stop being an untracked local fork. A and C both fix this; B leaves it as a section without its own identity.</span>
+      </div>
+      <div class="row">
+        <span class="idx">3.4</span>
+        <span class="name">Migration cost</span>
+        <span class="read">A breaks root-path installs once. Acceptable only at a major-version boundary — which 1.0 is.</span>
+      </div>
+      <div class="row">
+        <span class="idx">3.5</span>
+        <span class="name">1.0 timing</span>
+        <span class="read">The release deadline rewards the option that ships both skills launch-grade now, not after a second repo is stood up.</span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="sec-decision">
+    <div class="sec-head">
+      <span class="num">4.0 · Decision</span>
+      <h2 id="sec-decision">Decision panel</h2>
+    </div>
+    <div class="decision-panel">
+      <div class="dp-head">
+        <span class="meta">Resolution</span>
+        <span class="stamp signal">DECIDED</span>
+      </div>
+      <div class="dp-body">
+        <h3>Option A — monorepo skill family: <code>skills/htmlify</code> + <code>skills/deckify</code>, one npm package, shared runtime and validator.</h3>
+        <p class="measure" style="margin-bottom:0">The breaking change (root <code>SKILL.md</code> removed) is accepted at the 1.0 boundary, with a migration note shipped alongside. C's separation buys nothing for one file of divergence; B's simplicity costs deckify its agent-facing identity permanently.</p>
+      </div>
+      <div class="dp-grid">
+        <div class="cell">
+          <span class="label">Option</span>
+          <span class="value">A · MONOREPO SKILL FAMILY</span>
+        </div>
+        <div class="cell">
+          <span class="label">Date</span>
+          <span class="value">2026-06-11</span>
+        </div>
+        <div class="cell">
+          <span class="label">Decider</span>
+          <span class="value">Zak El Fassi (maintainer)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="sec-consequences">
+    <div class="sec-head">
+      <span class="num">5.0 · Consequences &amp; Migration</span>
+      <h2 id="sec-consequences">What changes, and what existing installs must do</h2>
+    </div>
+    <div class="cellgrid">
+      <div class="cg">
+        <div class="cg-label">Breaking change <span class="stamp risk" style="margin-left:6px">BREAKING</span></div>
+        <p>The root <code>SKILL.md</code> is removed. Installs that point at the repository root stop resolving at 1.0.</p>
+      </div>
+      <div class="cg">
+        <div class="cg-label">Migration <span class="stamp ok" style="margin-left:6px">ONE-TIME</span></div>
+        <p>Re-install pointing at <code>skills/htmlify</code>; optionally also <code>skills/deckify</code>. CLI, hook, and Pi entry points are unchanged.</p>
+      </div>
+      <div class="cg">
+        <div class="cg-label">Vendorability</div>
+        <p>Each skill folder must be individually vendorable: an agent that copies only <code>skills/deckify</code> gets a complete, working skill.</p>
+      </div>
+      <div class="cg">
+        <div class="cg-label">Shared references <span class="stamp ok" style="margin-left:6px">TEST-ENFORCED</span></div>
+        <p>Shared references — the Hardcopy spec — ship as identical copies in both skills, enforced byte-identical by a test.</p>
+      </div>
+    </div>
+    <div class="well">
+      <div class="well-meta">Migration · shell</div>
+      <pre># Before 1.0 (root SKILL.md)        # From 1.0 (skill folders)
+github.com/zakelfassi/htmlify   →   github.com/zakelfassi/htmlify → skills/htmlify
+                                    github.com/zakelfassi/htmlify → skills/deckify  (optional)
+
+# Unchanged entry points
+npx -y @zakelfassi/htmlify htmlify-answer --validate &lt;file&gt; --profile rich</pre>
+    </div>
+  </section>
+
+  <section aria-labelledby="sec-revisit">
+    <div class="sec-head">
+      <span class="num">6.0 · Revisit Triggers</span>
+      <h2 id="sec-revisit">Conditions that reopen this decision</h2>
+    </div>
+    <div class="triggers">
+      <div class="row">
+        <span class="idx">6.1</span>
+        <span>deckify's runtime needs diverge materially from htmlify's — its own validator profile family, build step, or dependencies the shared core should not carry.</span>
+        <span class="then">→ Revisit Option C</span>
+      </div>
+      <div class="row">
+        <span class="idx">6.2</span>
+        <span>The byte-identical-copy test for shared references becomes a recurring friction point — frequent intentional divergence of the Hardcopy spec between skills.</span>
+        <span class="then">→ Extract shared spec package</span>
+      </div>
+      <div class="row">
+        <span class="idx">6.3</span>
+        <span>A third skill joins the family and the single npm package's size or release coupling starts penalizing consumers of one skill.</span>
+        <span class="then">→ Revisit per-skill packages</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer-plate">
+    <span class="meta">Decision-Brief · deckify packaging · Decided Option A</span>
+    <span class="meta">Source: <a href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a> · 2026-06-11</span>
+  </footer>
+</main>
+</body>
+</html>

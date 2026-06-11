@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>htmlify runtime — implementation map</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --paper: #faf7f0;
+      --surface: #ffffff;
+      --ink: #1c1a15;
+      --ink-2: #6e6759;
+      --rule: #d9d2c3;
+      --rule-strong: #1c1a15;
+      --signal: #e84b0f;
+      --signal-wash: #fbeae1;
+      --ok: #2c7a52;
+      --warn: #a87514;
+      --risk: #b5341b;
+      --code-bg: #211e18;
+      --code-ink: #e8e2d4;
+      --code-meta: #a39a88;
+      --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #161410;
+        --surface: #1e1b16;
+        --ink: #ede8dc;
+        --ink-2: #a39a88;
+        --rule: #3a352b;
+        --rule-strong: #ede8dc;
+        --signal: #ff6b2c;
+        --signal-wash: #3a2114;
+        --ok: #5bbe8c;
+        --warn: #d9a93e;
+        --risk: #e2603f;
+        --code-bg: #0e0d0a;
+        --code-ink: #d8d2c4;
+        --code-meta: #6e6759;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 15.5px/1.6 var(--font-body);
+    }
+    /* Crop marks */
+    body::before, body::after, .wrap::before, .wrap::after {
+      content: "";
+      position: fixed;
+      width: 14px;
+      height: 14px;
+      border-color: var(--rule);
+      border-style: solid;
+      pointer-events: none;
+    }
+    body::before { top: 10px; left: 10px; border-width: 1px 0 0 1px; }
+    body::after { top: 10px; right: 10px; border-width: 1px 1px 0 0; }
+    .wrap::before { bottom: 10px; left: 10px; border-width: 0 0 1px 1px; }
+    .wrap::after { bottom: 10px; right: 10px; border-width: 0 1px 1px 0; }
+    .wrap { max-width: 1140px; margin: 0 auto; padding: 40px 28px 72px; }
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    /* ---- Plate ---- */
+    .plate { border: 2px solid var(--rule-strong); margin-bottom: 40px; }
+    .plate-head { display: flex; align-items: stretch; border-bottom: 1px solid var(--rule); }
+    .plate-mode {
+      display: flex;
+      align-items: center;
+      background: var(--signal);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px 16px;
+      white-space: nowrap;
+    }
+    .plate-title { padding: 16px 20px 14px; min-width: 0; }
+    h1 {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: clamp(28px, 4.4vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.015em;
+      margin: 0;
+    }
+    .plate-sub { margin: 8px 0 0; color: var(--ink-2); font-size: 15px; line-height: 1.55; max-width: 76ch; }
+    .plate-cells { display: flex; flex-wrap: wrap; }
+    .cell {
+      flex: 1 1 auto;
+      padding: 9px 16px;
+      border-right: 1px solid var(--rule);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+    .cell:last-child { border-right: 0; }
+    .cell b {
+      display: block;
+      font-weight: 400;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+      margin-bottom: 2px;
+    }
+    .cell a { color: inherit; text-decoration-color: var(--rule); }
+    /* ---- Sections ---- */
+    section.sheet { border-top: 2px solid var(--rule-strong); margin-top: 44px; padding-top: 10px; }
+    .sec-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    h2 {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: 27px;
+      line-height: 1.12;
+      letter-spacing: -0.01em;
+      margin: 6px 0 14px;
+    }
+    h3 {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: 20px;
+      margin: 24px 0 8px;
+    }
+    p { margin: 0 0 14px; max-width: 74ch; }
+    a { color: var(--ink); text-decoration-color: var(--rule); }
+    a:hover { text-decoration-color: var(--signal); }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      padding: 0.08rem 0.32rem;
+      white-space: nowrap;
+    }
+    /* ---- Stamps ---- */
+    .stamp {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1.5px solid currentColor;
+      border-radius: 2px;
+      padding: 2px 8px;
+      background: transparent;
+    }
+    .stamp.ok { color: var(--ok); }
+    .stamp.signal { color: var(--signal); }
+    /* ---- Figure ---- */
+    figure { margin: 0; }
+    .fig-frame { border: 1px solid var(--rule); background: var(--paper); padding: 8px; }
+    .fig-frame svg { display: block; width: 100%; height: auto; }
+    figcaption {
+      margin-top: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    figcaption a { color: var(--ink-2); }
+    /* ---- Hot path rows ---- */
+    .steps { border: 1px solid var(--rule-strong); }
+    .step {
+      display: grid;
+      grid-template-columns: 52px 280px 200px minmax(0, 1fr);
+      border-bottom: 1px solid var(--rule);
+    }
+    .step:last-child { border-bottom: 0; }
+    .step > div { padding: 10px 14px; min-width: 0; }
+    .step-no {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--signal);
+      border-right: 1px solid var(--rule);
+    }
+    .step-fn { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0.01em; overflow-wrap: anywhere; }
+    .step-file { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); letter-spacing: 0.03em; overflow-wrap: anywhere; }
+    .step-desc { font-size: 14px; color: var(--ink); }
+    /* ---- Two-up panels ---- */
+    .duo { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--rule-strong); }
+    .duo > div { padding: 16px 18px; }
+    .duo > div:first-child { border-right: 1px solid var(--rule); }
+    .duo h3 { margin-top: 0; }
+    .duo ul { margin: 0 0 10px 20px; padding: 0; }
+    .duo li { margin-bottom: 7px; font-size: 14px; }
+    /* ---- Carbon well ---- */
+    .well {
+      margin: 18px 0 6px;
+      border-radius: 2px;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      overflow: hidden;
+    }
+    .well-meta {
+      padding: 9px 14px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--code-meta);
+      border-bottom: 1px solid rgba(163, 154, 136, 0.25);
+    }
+    .well pre {
+      margin: 0;
+      padding: 14px 16px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    /* ---- Tables ---- */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid var(--rule-strong); }
+    th, td {
+      padding: 9px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+      font-size: 13.5px;
+    }
+    th {
+      font-family: var(--font-mono);
+      font-weight: 400;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--ink-2);
+      border-bottom: 1px solid var(--rule-strong);
+    }
+    tr:last-child td { border-bottom: 0; }
+    td.path, td.loc, td.exports { font-family: var(--font-mono); font-size: 12px; }
+    td.loc { text-align: right; color: var(--ink-2); }
+    td.exports { color: var(--ink-2); overflow-wrap: anywhere; }
+    tr.hot td.path { color: var(--signal); }
+    tr.total td { border-top: 1px solid var(--rule-strong); font-family: var(--font-mono); font-size: 12px; }
+    /* ---- Edit sequences ---- */
+    .procs { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--rule-strong); }
+    .proc { padding: 16px 18px; border-right: 1px solid var(--rule); min-width: 0; }
+    .proc:last-child { border-right: 0; }
+    .proc h3 { margin-top: 4px; font-size: 19px; }
+    .proc ol { margin: 0 0 0 20px; padding: 0; }
+    .proc li { margin-bottom: 9px; font-size: 13.5px; }
+    /* ---- Footer ---- */
+    footer {
+      margin-top: 56px;
+      border-top: 2px solid var(--rule-strong);
+      padding-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 920px) {
+      .step { grid-template-columns: 44px 1fr; }
+      .step-file, .step-desc { grid-column: 2; border-top: 0; padding-top: 0; }
+      .duo, .procs { grid-template-columns: 1fr; }
+      .duo > div:first-child, .proc { border-right: 0; border-bottom: 1px solid var(--rule); }
+      .proc:last-child { border-bottom: 0; }
+      .plate-head { flex-direction: column; }
+    }
+    @media print {
+      :root { --paper: #ffffff; }
+      .wrap { max-width: none; padding: 0; }
+      .plate, .steps, .duo, table, .procs { break-inside: avoid; }
+      .plate-mode { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .well { border: 1px solid var(--rule); }
+      @page { margin: 14mm; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+
+    <header class="plate" aria-labelledby="title">
+      <div class="plate-head">
+        <div class="plate-mode">Implementation-Map</div>
+        <div class="plate-title">
+          <h1 id="title">htmlify runtime — how an answer becomes an artifact</h1>
+          <p class="plate-sub">Module map of the htmlify Node runtime: a dependency-layered core under <code>src/</code>, one facade, three entry surfaces (CLI, Claude Code hook, Pi/OMP extension), and a validator that gates every model-generated document before it touches disk.</p>
+        </div>
+      </div>
+      <div class="plate-cells">
+        <div class="cell"><b>Scope</b>runtime · src/</div>
+        <div class="cell"><b>Modules</b>17 files · 2,638 LOC</div>
+        <div class="cell"><b>Date</b>2026-06-11</div>
+        <div class="cell"><b>Branch</b>v1</div>
+        <div class="cell"><b>Source</b><a href="https://github.com/zakelfassi/htmlify" rel="noreferrer noopener">github.com/zakelfassi/htmlify</a></div>
+      </div>
+    </header>
+
+    <!-- ============ 1.0 DEPENDENCY GRAPH ============ -->
+    <section class="sheet" aria-labelledby="s1">
+      <div class="sec-label"><span class="mono">1.0 · System Shape</span><span class="stamp signal">Hot Path Marked</span></div>
+      <h2 id="s1">Module dependency graph</h2>
+      <figure>
+        <div class="fig-frame">
+          <svg viewBox="0 0 1040 590" role="img" aria-label="Dependency graph of the htmlify runtime: entry points feed the index.js facade, which leads into the layered core from constants and text up through markdown, document, annotation, validate, artifacts, and the extension runtime. Hot-path modules are outlined in orange.">
+            <defs>
+              <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L8,4 L0,8 Z" fill="var(--ink-2)" />
+              </marker>
+            </defs>
+
+            <!-- Lane labels -->
+            <text x="40" y="14" font-family="var(--font-mono)" font-size="10" letter-spacing="1.5" fill="var(--ink-2)">ENTRY POINTS</text>
+            <text x="40" y="180" font-family="var(--font-mono)" font-size="10" letter-spacing="1.5" fill="var(--ink-2)">RUNTIME CORE</text>
+
+            <!-- Edges (drawn first, under boxes) -->
+            <g stroke="var(--ink-2)" stroke-width="1" fill="none" marker-end="url(#arr)">
+              <!-- entries into facade -->
+              <path d="M165,70 L165,102" />
+              <path d="M455,70 L455,102" />
+              <path d="M765,70 L765,102" />
+              <!-- facade into core -->
+              <path d="M330,138 L330,188" />
+              <path d="M575,138 L575,308" />
+              <path d="M870,138 L870,188" />
+              <path d="M225,138 L225,523 L248,523" />
+              <!-- core layering -->
+              <path d="M190,225 L248,212" />
+              <path d="M190,243 L248,306" />
+              <path d="M190,355 L248,406" />
+              <path d="M190,372 L248,512" />
+              <path d="M115,386 L115,468" />
+              <path d="M330,236 L330,288" />
+              <path d="M410,316 L488,328" />
+              <path d="M410,410 L488,346" />
+              <path d="M410,517 L534,364" />
+              <path d="M660,330 L738,230" />
+              <!-- extension helper trunk -->
+              <path d="M760,490 L760,248" />
+            </g>
+            <g stroke="var(--ink-2)" stroke-width="1" fill="none">
+              <path d="M780,330 L760,330" />
+              <path d="M780,380 L760,380" />
+              <path d="M780,430 L760,430" />
+              <path d="M780,480 L760,480" />
+              <path d="M190,490 L760,490" />
+            </g>
+
+            <!-- Entry boxes -->
+            <g fill="var(--surface)" stroke="var(--ink)" stroke-width="1">
+              <rect x="40" y="24" width="250" height="46" />
+              <rect x="320" y="24" width="270" height="46" />
+              <rect x="640" y="24" width="250" height="46" />
+            </g>
+            <g font-family="var(--font-mono)" font-size="11.5" fill="var(--ink)">
+              <text x="52" y="43">bin/htmlify-answer.js</text>
+              <text x="332" y="43">hooks/claude-code-stop-…</text>
+              <text x="652" y="43">Pi / OMP host</text>
+            </g>
+            <g font-family="var(--font-mono)" font-size="9.5" fill="var(--ink-2)">
+              <text x="52" y="60">CLI · EXPORT + --VALIDATE</text>
+              <text x="332" y="60">CLAUDE CODE STOP HOOK</text>
+              <text x="652" y="60">LOADS createExtension(pi)</text>
+            </g>
+
+            <!-- Facade bar -->
+            <rect x="40" y="104" width="960" height="34" fill="var(--surface)" stroke="var(--ink)" stroke-width="1" />
+            <text x="52" y="125" font-family="var(--font-mono)" font-size="11.5" fill="var(--ink)">index.js — facade</text>
+            <text x="240" y="125" font-family="var(--font-mono)" font-size="9.5" fill="var(--ink-2)">EXPORTS createExtension · RE-EXPORTS EVERY MODULE VIA _internals</text>
+
+            <!-- Core boxes (plain) -->
+            <g fill="var(--surface)" stroke="var(--ink)" stroke-width="1">
+              <rect x="40" y="210" width="150" height="46" />
+              <rect x="40" y="340" width="150" height="46" />
+              <rect x="40" y="470" width="150" height="46" />
+              <rect x="250" y="500" width="160" height="46" />
+              <rect x="780" y="360" width="220" height="40" />
+              <rect x="780" y="460" width="220" height="40" />
+            </g>
+            <!-- Core boxes (hot path) -->
+            <g fill="var(--surface)" stroke="var(--signal)" stroke-width="2">
+              <rect x="250" y="190" width="160" height="46" />
+              <rect x="250" y="290" width="160" height="46" />
+              <rect x="250" y="390" width="160" height="46" />
+              <rect x="490" y="310" width="170" height="52" />
+              <rect x="740" y="190" width="260" height="56" />
+              <rect x="780" y="310" width="220" height="40" />
+              <rect x="780" y="410" width="220" height="40" />
+            </g>
+
+            <!-- Core labels -->
+            <g font-family="var(--font-mono)" font-size="11.5" fill="var(--ink)">
+              <text x="52" y="229">src/text.js</text>
+              <text x="52" y="359">src/constants.js</text>
+              <text x="52" y="489">src/comments.js</text>
+              <text x="262" y="209">src/markdown.js</text>
+              <text x="262" y="309">src/document.js</text>
+              <text x="262" y="409">src/annotation.js</text>
+              <text x="262" y="519">src/validate.js</text>
+              <text x="502" y="330">src/artifacts.js</text>
+              <text x="752" y="210">src/extension/index.js</text>
+              <text x="792" y="327">extension/messages.js</text>
+              <text x="792" y="377">extension/parse.js</text>
+              <text x="792" y="427">extension/open.js</text>
+              <text x="792" y="477">extension/prompts.js</text>
+            </g>
+            <g font-family="var(--font-mono)" font-size="9.5" fill="var(--ink-2)">
+              <text x="52" y="246">SHA · ESCAPE · COUNTS</text>
+              <text x="52" y="376">LIMITS · SAFETY REGEXES</text>
+              <text x="52" y="506">BUNDLE → REVIEW PROMPT</text>
+              <text x="262" y="226">renderMarkdownish</text>
+              <text x="262" y="326">HARDCOPY DOC SHELL</text>
+              <text x="262" y="426">COMMENT LAYER INJECT</text>
+              <text x="262" y="536">RICH · APP · DECK</text>
+              <text x="502" y="348">writeHtmlArtifact</text>
+              <text x="752" y="230">EVENTS · COMMANDS · STATE</text>
+              <text x="792" y="343">extractMessageInfo</text>
+              <text x="792" y="393">COMMAND + ARG PARSING</text>
+              <text x="792" y="443">openArtifact</text>
+              <text x="792" y="493">buildRichHtmlPrompt</text>
+            </g>
+
+            <!-- Hot path step badges -->
+            <g>
+              <circle cx="780" cy="310" r="10" fill="var(--signal)" />
+              <circle cx="740" cy="190" r="10" fill="var(--signal)" />
+              <circle cx="250" cy="190" r="10" fill="var(--signal)" />
+              <circle cx="490" cy="310" r="10" fill="var(--signal)" />
+              <circle cx="250" cy="290" r="10" fill="var(--signal)" />
+              <circle cx="250" cy="390" r="10" fill="var(--signal)" />
+              <circle cx="780" cy="410" r="10" fill="var(--signal)" />
+            </g>
+            <g font-family="var(--font-mono)" font-size="9.5" fill="#fff" text-anchor="middle">
+              <text x="780" y="313.5">01</text>
+              <text x="740" y="193.5">02</text>
+              <text x="250" y="193.5">04</text>
+              <text x="490" y="313.5">05</text>
+              <text x="250" y="293.5">06</text>
+              <text x="250" y="393.5">07</text>
+              <text x="780" y="413.5">08</text>
+            </g>
+
+            <!-- Legend -->
+            <rect x="40" y="556" width="14" height="14" fill="none" stroke="var(--signal)" stroke-width="2" />
+            <text x="64" y="567" font-family="var(--font-mono)" font-size="10" letter-spacing="1" fill="var(--ink-2)">HOT PATH — LONG ANSWER → OPENED ARTIFACT · BADGES MATCH STEPS IN SHEET 2.0</text>
+          </svg>
+        </div>
+        <figcaption>FIG 1 · Module dependency graph, arrows point from dependency to consumer · Source: <a href="https://github.com/zakelfassi/htmlify" rel="noreferrer noopener">zakelfassi/htmlify</a> @ v1, require() statements in index.js, src/, bin/, hooks/</figcaption>
+      </figure>
+      <p style="margin-top:14px">Layering is strict and acyclic: <code>constants</code> and <code>text</code> have no internal dependencies; <code>markdown</code>, <code>document</code>, <code>annotation</code>, and <code>validate</code> build on them; <code>artifacts</code> composes all four to write files; <code>src/extension/index.js</code> is the only stateful module and the only one that talks to a host. <code>bin/htmlify-answer.js</code> and <code>hooks/claude-code-stop-htmlify.js</code> never import core modules directly — both go through the <code>index.js</code> facade's <code>_internals</code>.</p>
+    </section>
+
+    <!-- ============ 2.0 HOT PATH ============ -->
+    <section class="sheet" aria-labelledby="s2">
+      <div class="sec-label"><span class="mono">2.0 · Hot Path</span><span class="mono">message_end → opened file</span></div>
+      <h2 id="s2">Long answer to opened artifact, in eight calls</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-no">01</div>
+          <div class="step-fn">extractMessageInfo(event)</div>
+          <div class="step-file">src/extension/messages.js:35</div>
+          <div class="step-desc">On <code>message_end</code>, normalizes loose host event shapes (<code>message</code> / <code>entry</code> / <code>payload</code> / <code>data</code>), keeps only assistant-role text, returns <code>{ id, role, text }</code> with a SHA-1 fallback id.</div>
+        </div>
+        <div class="step">
+          <div class="step-no">02</div>
+          <div class="step-fn">buildSourceRecord(text)</div>
+          <div class="step-file">src/extension/index.js:190</div>
+          <div class="step-desc">Derives a title, computes character/line/paragraph/word stats, and stores the record as <code>state.lastEligible</code>; a custom session entry (<code>html-long-answer-source</code>, sans text) persists it across reloads. <code>isLongAnswer</code> gates at 1,800 chars / 24 lines / 6 paragraphs.</div>
+        </div>
+        <div class="step">
+          <div class="step-no">03</div>
+          <div class="step-fn">/htmlify → exportLatestFromCommand</div>
+          <div class="step-file">src/extension/index.js:504 · parse.js:18</div>
+          <div class="step-desc"><code>parseHtmlCommandInput</code> matches <code>/htmlify</code>, <code>/html-last</code>, <code>/htmlify-last</code>; <code>resolveForcedExportMode</code> maps args to <code>choose</code> / <code>rich-gemini</code> / <code>rich-pi</code> / <code>local</code>. Default path is the local render.</div>
+        </div>
+        <div class="step">
+          <div class="step-no">04</div>
+          <div class="step-fn">renderMarkdownish(source.text)</div>
+          <div class="step-file">src/markdown.js:64</div>
+          <div class="step-desc">Single-pass line scanner: fenced code becomes a carbon well with a language meta strip, headings shift one level down, blockquotes become callouts, pipe tables become real tables, lists and inline links/bold/code are formatted — all through <code>escapeHtml</code> first.</div>
+        </div>
+        <div class="step">
+          <div class="step-no">05</div>
+          <div class="step-fn">writeHtmlArtifact({ title, bodyHtml, sourceText, mode })</div>
+          <div class="step-file">src/artifacts.js:25</div>
+          <div class="step-desc">Resolves the export root (<code>HTMLIFY_EXPORT_ROOT</code> → legacy <code>PI_HTML_LONG_ANSWER_EXPORT_ROOT</code> → os tmpdir), builds a timestamp-slug-mode filename, and stamps the answer's SHA-1 as <code>sourceId</code> so later comments can be matched to it.</div>
+        </div>
+        <div class="step">
+          <div class="step-no">06</div>
+          <div class="step-fn">buildLocalHtmlDocument(title, body, meta)</div>
+          <div class="step-file">src/document.js:69</div>
+          <div class="step-desc">Wraps the body in the Hardcopy skin: plate title block with mode/word/character cells, crop marks, numbered index rail from the headings, carbon code wells, dark-mode tokens, and print rules.</div>
+        </div>
+        <div class="step">
+          <div class="step-no">07</div>
+          <div class="step-fn">addCommentableAttributes + injectAnnotationLayer</div>
+          <div class="step-file">src/annotation.js:7,160</div>
+          <div class="step-desc">Tags every block element with <code>data-commentable</code> / <code>data-block-id="b-N"</code>, then appends the trusted annotation layer before <code>&lt;/body&gt;</code>: a localStorage-backed comment panel keyed by <code>sourceId</code>, exporting Markdown or JSON for <code>/htmlify-comments</code>. Guarded by a marker comment so it is never injected twice.</div>
+        </div>
+        <div class="step">
+          <div class="step-no">08</div>
+          <div class="step-fn">writeFile → openArtifact(filePath)</div>
+          <div class="step-file">src/artifacts.js:43 · src/extension/open.js:41</div>
+          <div class="step-desc">File hits disk; <code>openArtifact</code> resolves <code>/usr/bin/open</code> (macOS) or <code>xdg-open</code> (Linux) from PATH, spawns it detached, and treats survival past a 1,000&nbsp;ms failure window as success. <code>HTMLIFY_SKIP_OPEN=1</code> suppresses it.</div>
+        </div>
+      </div>
+      <p style="margin-top:14px">The rich variant forks at step 03: <code>queueRichExport</code> either shells out to the Gemini CLI or sends <code>buildRichHtmlPrompt</code> back to the host as a follow-up turn, then <code>maybeHandlePendingRichExport</code> catches the next assistant message, extracts the fenced HTML, and routes it through the validation path below — falling back to the local render if the document is unsafe or plain text.</p>
+    </section>
+
+    <!-- ============ 3.0 VALIDATION ============ -->
+    <section class="sheet" aria-labelledby="s3">
+      <div class="sec-label"><span class="mono">3.0 · Validation Path</span><span class="stamp ok">Gate Before Disk</span></div>
+      <h2 id="s3">Two doors, one set of collectors</h2>
+      <div class="duo">
+        <div>
+          <h3>Runtime gate — model HTML</h3>
+          <ul>
+            <li><code>extractHtmlDocument</code> (messages.js) pulls a fenced <code>```html</code> block or bare document out of the model's reply.</li>
+            <li><code>writeRichHtmlArtifact</code> (artifacts.js) calls <code>validateRichHtmlDocument</code> (validate.js:216), which runs the rich collector and <strong>throws on the first error</strong> — nothing invalid is ever written.</li>
+            <li>On throw, the extension notifies and writes an <code>llm-enhanced-fallback</code> local render instead, so the user always gets a file.</li>
+          </ul>
+          <h3>What the rich collector rejects</h3>
+          <ul>
+            <li>Blocked tags: script, iframe, object, embed, link, base, and all form controls (<code>BLOCKED_RICH_TAGS</code>).</li>
+            <li>Event-handler attributes and <code>javascript:</code>-scheme URLs.</li>
+            <li>External assets in markup or CSS (<code>EXTERNAL_ASSET_ATTR</code>, <code>EXTERNAL_CSS_URL</code>), meta refresh.</li>
+            <li>Size: over 512&nbsp;KB or 2,500 tags; not a standalone document. Missing doctype and missing local assets are warnings.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>CLI gate — <code>--validate</code></h3>
+          <ul>
+            <li><code>bin/htmlify-answer.js</code> validates files against a profile; <code>detectProfile</code> (validate.js:247) sniffs each document when set to <code>auto</code>: slides + speaker notes → <code>deck</code>, any inline script → <code>app</code>, otherwise <code>rich</code>.</li>
+            <li><code>app</code> profile (<code>allowInlineScript: true</code>) permits inline scripts and form controls for editors/prototypes, but still bans external scripts, embeds, event-handler attributes, and non-<code>data:</code> link hrefs.</li>
+            <li><code>deck</code> profile adds the deckify contract via <code>collectDeckIssues</code>: non-empty title, viewport meta, ≥2 slide sections, a keydown listener for navigation, speaker notes on every substantive slide, 2&nbsp;MB budget; missing print CSS is a warning.</li>
+            <li>Exit codes: 0 valid · 1 validation errors · 2 usage/IO error. <code>--format json</code> emits machine-readable reports.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="well">
+        <div class="well-meta">shell · validate this very file</div>
+        <pre>node bin/htmlify-answer.js --validate examples/htmlify/implementation-map.html --profile rich
+# examples/htmlify/implementation-map.html: valid — 0 errors, 0 warnings (profile: rich)</pre>
+      </div>
+    </section>
+
+    <!-- ============ 4.0 FILE TOUR ============ -->
+    <section class="sheet" aria-labelledby="s4">
+      <div class="sec-label"><span class="mono">4.0 · File Tour</span><span class="stamp ok">LOC Measured 2026-06-11</span></div>
+      <h2 id="s4">Seventeen files, one job each</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Path</th><th>LOC</th><th>Responsibility</th><th>Key exports</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="path">index.js</td><td class="loc">45</td><td>Public facade: the extension factory is the default export; every internal symbol is re-exported under <code>_internals</code> for the CLI, hook, and tests.</td><td class="exports">createExtension · _internals</td></tr>
+            <tr><td class="path">src/constants.js</td><td class="loc">72</td><td>All tunables and safety regexes in one place: long-answer thresholds, size budgets, blocked-tag patterns, session entry types, the trusted-annotation marker.</td><td class="exports">LONG_ANSWER_DEFAULTS · BLOCKED_RICH_TAGS · MAX_RICH_HTML_CHARS</td></tr>
+            <tr><td class="path">src/text.js</td><td class="loc">79</td><td>Dependency-free primitives: SHA-1 ids, HTML escaping, slugs, paragraph/line/word counts.</td><td class="exports">sha · escapeHtml · slugify · wordCount</td></tr>
+            <tr class="hot"><td class="path">src/markdown.js</td><td class="loc">164</td><td>Markdownish-to-HTML renderer for the local export path: fences, headings, callouts, pipe tables, lists, inline formatting.</td><td class="exports">renderMarkdownish · formatInline</td></tr>
+            <tr class="hot"><td class="path">src/document.js</td><td class="loc">356</td><td>The Hardcopy document shell: plate, crop marks, index rail, carbon wells, dark mode, print CSS; plus title/excerpt/outline derivation.</td><td class="exports">buildLocalHtmlDocument · deriveTitle · buildOutlineHtml</td></tr>
+            <tr><td class="path">src/validate.js</td><td class="loc">265</td><td>Issue collectors and throwing validators for the rich/app/deck profiles, plus shape-sniffing profile detection and local-asset checks.</td><td class="exports">collectRichHtmlIssues · collectDeckIssues · validateRichHtmlDocument · detectProfile</td></tr>
+            <tr class="hot"><td class="path">src/annotation.js</td><td class="loc">172</td><td>Review layer: marks blocks commentable and injects the localStorage comment panel (the one place trusted inline script is generated).</td><td class="exports">addCommentableAttributes · injectAnnotationLayer</td></tr>
+            <tr><td class="path">src/comments.js</td><td class="loc">75</td><td>Round trip for reviewer comments: validates a downloaded JSON bundle against the captured <code>sourceId</code> and renders it as an agent prompt.</td><td class="exports">validateCommentBundle · buildCommentsPrompt</td></tr>
+            <tr class="hot"><td class="path">src/artifacts.js</td><td class="loc">69</td><td>The only module that writes files: resolves the export root, names artifacts, composes document + annotation, validates rich HTML before write.</td><td class="exports">writeHtmlArtifact · writeRichHtmlArtifact · getExportRoot</td></tr>
+            <tr class="hot"><td class="path">src/extension/index.js</td><td class="loc">685</td><td>Pi/OMP extension runtime: session state, event wiring (<code>message_end</code>, session restore), slash commands, mode choice UI, Gemini shell-out, rich-export follow-up loop.</td><td class="exports">module.exports = createExtension(pi)</td></tr>
+            <tr class="hot"><td class="path">src/extension/messages.js</td><td class="loc">97</td><td>Host-event normalization: extract assistant text from arbitrary event shapes, long-answer detection, fenced-HTML extraction.</td><td class="exports">extractMessageInfo · isLongAnswer · extractHtmlDocument</td></tr>
+            <tr><td class="path">src/extension/parse.js</td><td class="loc">60</td><td>Slash-command and argument parsing; maps user args to forced export modes.</td><td class="exports">parseHtmlCommandInput · resolveForcedExportMode</td></tr>
+            <tr class="hot"><td class="path">src/extension/open.js</td><td class="loc">82</td><td>Opens the written artifact in the default browser via a PATH-resolved platform opener, detached, with a short failure window.</td><td class="exports">openArtifact · resolveOpenCommand</td></tr>
+            <tr><td class="path">src/extension/prompts.js</td><td class="loc">32</td><td>The single prompt template asking a model to redesign a captured answer as a standalone HTML artifact.</td><td class="exports">buildRichHtmlPrompt</td></tr>
+            <tr><td class="path">src/extension/types.js</td><td class="loc">87</td><td>JSDoc typedefs for the host surface and records — no runtime code.</td><td class="exports">PiHost · ExtensionCtx · SourceRecord · ExportMeta</td></tr>
+            <tr><td class="path">bin/htmlify-answer.js</td><td class="loc">228</td><td>CLI: pipe text in to export an artifact, or <code>--validate</code> files against rich/app/deck/auto profiles with text or JSON reports.</td><td class="exports">main (via _internals)</td></tr>
+            <tr><td class="path">hooks/claude-code-stop-htmlify.js</td><td class="loc">70</td><td>Claude Code Stop hook: reads hook JSON from stdin, exports <code>last_assistant_message</code> when it clears <code>HTMLIFY_MIN_CHARS</code> (default 2,500); never fails the agent turn.</td><td class="exports">main (via _internals)</td></tr>
+            <tr class="total"><td>TOTAL</td><td class="loc">2,638</td><td colspan="2">wc -l, 2026-06-11 · orange rows sit on the hot path</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 5.0 EDIT SEQUENCES ============ -->
+    <section class="sheet" aria-labelledby="s5">
+      <div class="sec-label"><span class="mono">5.0 · Edit Sequences</span><span class="mono">Where To Cut</span></div>
+      <h2 id="s5">Three common changes, in order</h2>
+      <div class="procs">
+        <div class="proc">
+          <span class="mono">SEQ A</span>
+          <h3>Add an artifact mode</h3>
+          <ol>
+            <li>Modes are strings, not enums — define the new mode and its sections in <code>skills/htmlify/SKILL.md</code> first; the runtime carries it through untouched.</li>
+            <li>If users should force it from a slash command, add an alias in <code>resolveForcedExportMode</code> (src/extension/parse.js) and a branch in <code>handleChoice</code> / <code>exportLatestFromCommand</code> (src/extension/index.js).</li>
+            <li>The mode lands in the filename suffix and plate cell via <code>writeHtmlArtifact</code> (src/artifacts.js); adjust the mode copy switch in <code>buildLocalHtmlDocument</code> (src/document.js:341) if the local shell should describe it differently.</li>
+          </ol>
+        </div>
+        <div class="proc">
+          <span class="mono">SEQ B</span>
+          <h3>Add a validator check</h3>
+          <ol>
+            <li>Put the regex or limit in <code>src/constants.js</code> — collectors never define their own patterns.</li>
+            <li>Add the check in <code>collectRichHtmlIssues</code> or <code>collectDeckIssues</code> (src/validate.js), choosing error (blocks the write, fails CI) vs warning (reported only). Mind the <code>allowInlineScript</code> fork for app/deck.</li>
+            <li>No further wiring: <code>validateRichHtmlDocument</code>, the CLI <code>--validate</code> path, and the runtime gate all consume the collectors. Only a brand-new collector needs an <code>index.js</code> facade entry and a CLI profile branch.</li>
+          </ol>
+        </div>
+        <div class="proc">
+          <span class="mono">SEQ C</span>
+          <h3>Add an agent integration</h3>
+          <ol>
+            <li>Copy the shape of <code>hooks/claude-code-stop-htmlify.js</code>: a small executable that reads the agent's payload from stdin and exits 0 even on failure.</li>
+            <li>Call the facade — <code>require('../index.js')._internals</code> — for <code>renderMarkdownish</code> + <code>writeHtmlArtifact</code>; expose thresholds and paths as env vars (<code>HTMLIFY_MIN_CHARS</code>, <code>HTMLIFY_EXPORT_ROOT</code>).</li>
+            <li>Register it in the agent's hook config, then document install steps in <code>skills/htmlify/references/agent-integrations.md</code> alongside the existing Codex / Claude Code / Cursor entries.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span class="mono">Implementation-Map · htmlify @ v1 · 17 files · 2,638 LOC</span>
+      <span class="mono">Evidence: direct read of index.js, src/, src/extension/, bin/, hooks/ · 2026-06-11</span>
+    </footer>
+
+  </main>
+</body>
+</html>

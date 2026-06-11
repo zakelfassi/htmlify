@@ -2,35 +2,45 @@
   "name": "@zakelfassi/htmlify",
   "version": "0.3.1",
   "private": false,
-  "description": "Turn long agent answers into self-contained, browser-ready HTML artifacts for Pi, OMP, and agentskills-compatible workflows.",
+  "description": "Turn agent answers into self-contained HTML artifacts and presentation decks — operator briefs, review packets, incident timelines, decision briefs, and talks. Zero dependencies, zero build, one file.",
+  "license": "Apache-2.0",
   "type": "commonjs",
   "main": "index.js",
   "bin": {
     "htmlify-answer": "bin/htmlify-answer.js"
   },
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "lint": "biome ci .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit"
   },
   "files": [
-    "SKILL.md",
+    "index.js",
+    "src/",
     "bin/",
     "hooks/",
-    "index.js",
-    "README.md",
+    "skills/",
+    ".claude-plugin/",
     "assets/",
-    "references/"
+    "README.md"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zakelfassi/htmlify.git"
   },
-  "homepage": "https://github.com/zakelfassi/htmlify#readme",
+  "homepage": "https://zakelfassi.github.io/htmlify/",
   "bugs": {
     "url": "https://github.com/zakelfassi/htmlify/issues"
   },
   "keywords": [
     "agentskills",
     "agent-skill",
+    "deckify",
+    "claude-code",
+    "claude-code-plugin",
+    "presentation",
+    "deck",
     "oh-my-pi",
     "omp",
     "pi",
@@ -57,5 +67,10 @@
       "./index.js"
     ]
   },
-  "packageManager": "pnpm@8.15.0+sha512.ea45517d5285d123eac02c3793505fa1fd6da90a2fc60d1e8d9e0c1e9292886ecfaff513f062b9d1cc8021bb8615033b1ac5bea3b2ee3fc165a6d7034bbe6b03"
+  "packageManager": "pnpm@10.34.3+sha512.f2c531b08829d7be7f03c90addc266615f9c5477463e4bf1d275cb263ce9ea57cf0d5599110d94649a9bb3fed9f0b5efcea74a7016b61532a24cb9ad87860c1d",
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@types/node": "^20.19.42",
+    "typescript": "^6.0.3"
+  }
 }

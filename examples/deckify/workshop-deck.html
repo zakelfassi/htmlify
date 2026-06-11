@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Authoring Agent Skills: A Hands-On Workshop</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper: #faf7f0;
+  --surface: #ffffff;
+  --ink: #1c1a15;
+  --ink-2: #6e6759;
+  --rule: #d9d2c3;
+  --rule-strong: #1c1a15;
+  --signal: #e84b0f;
+  --signal-wash: #fbeae1;
+  --ok: #2c7a52;
+  --warn: #a87514;
+  --risk: #b5341b;
+  --code-bg: #211e18;
+  --code-ink: #e8e2d4;
+  --code-meta: #8d8675;
+  --font-display: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --topbar-h: 48px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161410;
+    --surface: #1e1b16;
+    --ink: #ede8dc;
+    --ink-2: #a39a88;
+    --rule: #3a352b;
+    --rule-strong: #ede8dc;
+    --signal: #ff6b2c;
+    --signal-wash: #3a2114;
+    --ok: #5bbe8c;
+    --warn: #d9a93e;
+    --risk: #e2603f;
+    --code-bg: #0e0d0a;
+    --code-ink: #d8d2c4;
+    --code-meta: #7d7666;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.6 var(--font-body);
+}
+body:not(.guide-open) { overflow: hidden; }
+
+/* ---------- presenter chrome: carbon ---------- */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  height: var(--topbar-h);
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 14px;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-bottom: 1px solid #3a352b;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.topbar .deck-title { color: var(--code-meta); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.topbar .mode-cell { background: var(--signal); color: #1c1a15; padding: 3px 8px; border-radius: 2px; font-weight: 600; }
+.topbar .progress { margin-left: auto; color: var(--code-ink); }
+.topbar button {
+  appearance: none; background: transparent; color: var(--code-ink);
+  border: 1px solid #4a4436; border-radius: 2px;
+  font: 600 11px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 4px 10px; cursor: pointer;
+}
+.topbar button:hover { border-color: var(--code-ink); }
+.kbd-hint { color: var(--code-meta); }
+@media (max-width: 820px) { .kbd-hint, .topbar .deck-title { display: none; } }
+
+/* ---------- deck shell: paper plates ---------- */
+.deck-shell { position: relative; height: calc(100vh - var(--topbar-h)); margin-top: var(--topbar-h); }
+.slide {
+  position: absolute; inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: clamp(22px, 4.5vh, 48px) clamp(24px, 6vw, 84px) clamp(14px, 2.5vh, 24px);
+  overflow: auto;
+  background: var(--paper);
+}
+.slide.active { display: flex; }
+.slide::before, .slide::after { content: ""; position: absolute; width: 14px; height: 14px; pointer-events: none; }
+.slide::before { top: 10px; left: 10px; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+.slide::after { bottom: 10px; right: 10px; border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+
+.eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2); margin: 0 0 10px;
+}
+.eyebrow::before { content: ""; display: inline-block; width: 8px; height: 8px; background: var(--signal); margin-right: 8px; vertical-align: baseline; }
+.slide h1 {
+  font-family: var(--font-display); font-size: clamp(30px, 4.6vw, 52px);
+  line-height: 1.08; letter-spacing: -0.015em; margin: 0 0 14px; max-width: 22ch;
+}
+.slide h2 {
+  font-family: var(--font-display); font-size: clamp(20px, 2.4vw, 28px);
+  line-height: 1.15; letter-spacing: -0.015em; margin: 18px 0 8px;
+}
+.slide p { max-width: 70ch; margin: 6px 0; }
+.lede { font-size: clamp(16px, 1.6vw, 19px); color: var(--ink); max-width: 62ch; }
+.muted { color: var(--ink-2); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-items: start; }
+@media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+footer.plate {
+  margin-top: auto; padding-top: 8px;
+  border-top: 2px solid var(--rule-strong);
+  display: flex; justify-content: space-between; gap: 12px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2);
+}
+
+/* ---------- stamps ---------- */
+.stamp {
+  display: inline-block; border: 1.5px solid currentColor; border-radius: 2px;
+  font: 600 11px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 8px; margin-bottom: 10px;
+}
+.stamp.signal { color: var(--signal); background: var(--signal-wash); }
+.stamp.ok { color: var(--ok); }
+.stamp.risk { color: var(--risk); }
+
+/* ---------- carbon code wells ---------- */
+.well { background: var(--code-bg); border-radius: 2px; margin: 12px 0; max-width: 100%; }
+.well .well-meta {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--code-meta); padding: 6px 14px; border-bottom: 1px solid #3a352b;
+}
+.well pre {
+  margin: 0; padding: 12px 14px; overflow: auto;
+  font: 12.5px/1.55 var(--font-mono); color: var(--code-ink);
+}
+.well .hl { color: #ffb38a; }
+
+/* ---------- tables ---------- */
+table.matrix { border-collapse: collapse; width: 100%; margin: 12px 0; }
+table.matrix th {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-2); text-align: left; padding: 7px 12px 7px 0;
+  border-bottom: 2px solid var(--rule-strong);
+}
+table.matrix td {
+  font-size: 13.5px; padding: 7px 12px 7px 0; vertical-align: top;
+  border-bottom: 1px solid var(--rule);
+}
+table.matrix td.mono, .mono { font-family: var(--font-mono); font-size: 12px; }
+table.matrix tr td:first-child { white-space: nowrap; }
+
+/* ---------- figures ---------- */
+figure { margin: 14px 0; }
+figure svg { width: 100%; height: auto; display: block; }
+figcaption {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2); margin-top: 6px;
+}
+figcaption a { color: var(--ink-2); }
+svg text { font-family: var(--font-mono); }
+svg .svg-ink { fill: var(--ink); }
+svg .svg-ink2 { fill: var(--ink-2); }
+svg .svg-box { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+svg .svg-soft { fill: var(--paper); stroke: var(--rule); stroke-width: 1; }
+svg .svg-line { stroke: var(--ink); stroke-width: 1.5; fill: none; }
+svg .svg-hair { stroke: var(--rule); stroke-width: 1; fill: none; }
+svg .svg-sig { fill: var(--signal-wash); stroke: var(--signal); stroke-width: 1.5; }
+svg .svg-sigline { stroke: var(--signal); stroke-width: 1.5; fill: none; }
+svg .svg-sigink { fill: var(--signal); }
+
+/* ---------- worksheet panel ---------- */
+.worksheet { border: 2px solid var(--rule-strong); padding: 14px 16px; background: var(--surface); }
+.worksheet .ws-label {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2); border-bottom: 1px solid var(--rule);
+  padding-bottom: 4px; margin-bottom: 8px;
+}
+.worksheet ol, .slide ol, .slide ul { margin: 6px 0 6px 20px; padding: 0; max-width: 66ch; }
+.worksheet li, .slide li { margin: 5px 0; }
+.blank-line { border-bottom: 1px solid var(--rule); height: 22px; margin: 8px 0; }
+
+/* ---------- speaker notes ---------- */
+.slide .notes { display: none; }
+.notes-panel {
+  position: fixed; right: 14px; bottom: 14px; z-index: 60;
+  width: min(440px, 92vw); max-height: 42vh; overflow: auto;
+  background: var(--code-bg); color: var(--code-ink);
+  border: 1px solid #3a352b; border-radius: 2px;
+  padding: 12px 14px; font-size: 13.5px; line-height: 1.55;
+}
+.notes-panel[hidden] { display: none; }
+.notes-panel .np-label {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--code-meta);
+  border-bottom: 1px solid #3a352b; padding-bottom: 5px; margin-bottom: 8px;
+}
+.notes-panel p { margin: 6px 0; }
+
+/* ---------- guide (handout) ---------- */
+.guide { display: none; }
+body.guide-open .deck-shell { display: none; }
+body.guide-open .notes-panel { display: none; }
+body.guide-open .guide {
+  display: block;
+  max-width: 74ch; margin: calc(var(--topbar-h) + 28px) auto 80px;
+  padding: 0 22px;
+}
+.guide h1 { font-family: var(--font-display); font-size: clamp(30px, 4vw, 44px); line-height: 1.1; letter-spacing: -0.015em; margin: 8px 0 6px; }
+.guide h2 {
+  font-family: var(--font-display); font-size: 26px; letter-spacing: -0.015em;
+  border-top: 2px solid var(--rule-strong); padding-top: 14px; margin: 34px 0 8px;
+}
+.guide h2 .secno { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; color: var(--ink-2); display: block; margin-bottom: 6px; }
+.guide h3 { font-family: var(--font-display); font-size: 19px; margin: 20px 0 6px; }
+.guide-plate {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border: 2px solid var(--rule-strong); margin: 14px 0 20px;
+}
+.guide-plate .cell { padding: 8px 10px; border-right: 1px solid var(--rule); font-size: 13px; }
+.guide-plate .cell:last-child { border-right: 0; }
+.guide-plate .cell .lbl { display: block; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.guide-plate .cell.sig { background: var(--signal); color: #1c1a15; }
+.guide-plate .cell.sig .lbl { color: #1c1a15; }
+@media (max-width: 640px) { .guide-plate { grid-template-columns: repeat(2, 1fr); } .guide-plate .cell { border-bottom: 1px solid var(--rule); } }
+.guide .ex { border: 1px solid var(--rule); border-top: 2px solid var(--rule-strong); padding: 12px 16px; margin: 14px 0; background: var(--surface); }
+.guide .ex .ex-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal); margin-bottom: 6px; }
+.guide ul, .guide ol { margin: 8px 0 8px 22px; padding: 0; }
+.guide li { margin: 5px 0; }
+.guide a { color: var(--ink); }
+.guide .refline { font-family: var(--font-mono); font-size: 12px; }
+.guide-actions { margin: 14px 0; }
+.guide-actions button {
+  appearance: none; background: var(--ink); color: var(--paper);
+  border: 0; border-radius: 2px; font: 600 12px var(--font-mono);
+  letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; cursor: pointer;
+}
+
+/* ---------- print: the handout ---------- */
+@media print {
+  :root { --paper: #ffffff; }
+  @page { margin: 14mm; }
+  .topbar, .deck-shell, .notes-panel, .guide-actions { display: none !important; }
+  .guide { display: block !important; max-width: none; margin: 0; padding: 0; }
+  .guide .ex, .guide-plate, table.matrix tr, .well { break-inside: avoid; }
+  .well { border: 1px solid var(--rule); }
+  .guide a::after { content: " (" attr(href) ")"; font-family: var(--font-mono); font-size: 10px; color: var(--ink-2); }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="mode-cell">Workshop-Deck</span>
+  <span class="deck-title">Authoring Agent Skills</span>
+  <button type="button" id="prev-slide">&#8249; Prev</button>
+  <button type="button" id="next-slide">Next &#8250;</button>
+  <button type="button" id="toggle-notes">Notes</button>
+  <button type="button" id="toggle-guide">Guide</button>
+  <span class="kbd-hint">Keys: arrows &middot; space &middot; home/end &middot; N notes &middot; G guide</span>
+  <span class="progress" id="progress">1 / 17</span>
+</header>
+
+<main class="deck-shell">
+
+<!-- ============ 01 OPENING ============ -->
+<section class="slide active" data-title="Opening">
+  <p class="eyebrow">Workshop &middot; 60 minutes &middot; hands-on</p>
+  <h1>Authoring agent skills: a hands-on workshop</h1>
+  <p class="lede">How to write a SKILL.md that an agent actually triggers, follows, and can verify &mdash; using the <span class="mono">htmlify</span> repo's own skills as the worked example.</p>
+  <div class="cols" style="margin-top:18px">
+    <div>
+      <h2>Who this is for</h2>
+      <p>Developers who use Claude Code, Codex, or any agentskills.io-compatible client and want to package a repeatable workflow as a skill.</p>
+    </div>
+    <div>
+      <h2>What you leave with</h2>
+      <p>A drafted frontmatter description, three rules rewritten to be testable, and a validator lab you ran yourself. Bring a laptop with Node 20+ and a clone of the repo.</p>
+    </div>
+  </div>
+  <p class="muted mono" style="margin-top:14px">3 acts &middot; 3 checkpoints &middot; printable handout under the Guide button (G)</p>
+  <footer class="plate"><span>Plate 01 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Welcome people in, then make the contract explicit: this is a workshop, not a talk. Three checkpoints, and everyone does all three. Confirm setup now: laptop, Node 20 or newer, and a clone of github.com/zakelfassi/htmlify &mdash; checkpoint 3 needs it.</p>
+    <p>Point at the Guide button: the handout is baked into this same HTML file, and printing it produces the PDF they take home. That is itself a preview of the lesson: artifacts that carry their own companion material.</p>
+  </aside>
+</section>
+
+<!-- ============ 02 THE PROBLEM ============ -->
+<section class="slide" data-title="The problem">
+  <p class="eyebrow">Cold open</p>
+  <h1>You have explained this workflow to your agent fourteen times</h1>
+  <div class="cols">
+    <div>
+      <p class="lede">&ldquo;Remember to inline the CSS&hellip; no external fonts&hellip; check it opens standalone&hellip; oh, and add print styles again.&rdquo;</p>
+      <p>Every session starts from zero. The workflow lives in your head and leaks into chat one correction at a time.</p>
+    </div>
+    <div>
+      <p class="lede">A skill is that workflow written down <em>once</em> &mdash; with a trigger, rules, and a way to check the result.</p>
+      <p>The agent reads it when the request matches, follows the rules, and validates its own output. No re-explaining.</p>
+    </div>
+  </div>
+  <p class="muted">Today's worked example: the <span class="mono">htmlify</span> and <span class="mono">deckify</span> skills that produced the deck you are looking at.</p>
+  <footer class="plate"><span>Plate 02 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Tell a real story here if you have one: the third time you retyped the same five instructions into a session. The pain is universal &mdash; let the room nod before you name the fix.</p>
+    <p>Land the meta-point: this deck was generated by the deckify skill following its own SKILL.md, and validated by the repo's CLI. Everything taught today is running in front of them.</p>
+  </aside>
+</section>
+
+<!-- ============ 03 MAP OF THE HOUR ============ -->
+<section class="slide" data-title="Map of the hour">
+  <p class="eyebrow">Orientation</p>
+  <h1>Three acts, three checkpoints</h1>
+  <figure>
+    <svg viewBox="0 0 960 190" role="img" aria-label="Timeline of the 60-minute workshop with three acts and three checkpoints">
+      <line x1="30" y1="120" x2="930" y2="120" class="svg-hair" />
+      <!-- segments -->
+      <rect x="30"  y="80" width="75"  height="40" class="svg-soft" />
+      <rect x="105" y="80" width="150" height="40" class="svg-box" />
+      <rect x="255" y="80" width="105" height="40" class="svg-sig" />
+      <rect x="360" y="80" width="150" height="40" class="svg-box" />
+      <rect x="510" y="80" width="105" height="40" class="svg-sig" />
+      <rect x="615" y="80" width="120" height="40" class="svg-box" />
+      <rect x="735" y="80" width="120" height="40" class="svg-sig" />
+      <rect x="855" y="80" width="75"  height="40" class="svg-soft" />
+      <!-- top labels -->
+      <text x="67"  y="68" text-anchor="middle" font-size="11" class="svg-ink2">OPEN</text>
+      <text x="180" y="68" text-anchor="middle" font-size="11" class="svg-ink">ACT 1 ANATOMY</text>
+      <text x="435" y="68" text-anchor="middle" font-size="11" class="svg-ink">ACT 2 RULES</text>
+      <text x="675" y="68" text-anchor="middle" font-size="11" class="svg-ink">ACT 3 VERIFY</text>
+      <text x="892" y="68" text-anchor="middle" font-size="11" class="svg-ink2">CLOSE</text>
+      <!-- checkpoint labels -->
+      <text x="307" y="145" text-anchor="middle" font-size="11" class="svg-sigink">CP1 DESCRIBE</text>
+      <text x="562" y="145" text-anchor="middle" font-size="11" class="svg-sigink">CP2 RULES</text>
+      <text x="795" y="145" text-anchor="middle" font-size="11" class="svg-sigink">CP3 LAB</text>
+      <!-- ticks -->
+      <text x="30"  y="172" font-size="10" class="svg-ink2">00:00</text>
+      <text x="255" y="172" font-size="10" class="svg-ink2" text-anchor="middle">15:00</text>
+      <text x="510" y="172" font-size="10" class="svg-ink2" text-anchor="middle">32:00</text>
+      <text x="735" y="172" font-size="10" class="svg-ink2" text-anchor="middle">47:00</text>
+      <text x="930" y="172" font-size="10" class="svg-ink2" text-anchor="end">60:00</text>
+    </svg>
+    <figcaption>Fig 1 &middot; The hour at a glance &mdash; checkpoints in orange are yours, not mine</figcaption>
+  </figure>
+  <p>Act 1: what a skill file <em>is</em>. Act 2: rules an agent will actually follow. Act 3: making the output check itself. Each act ends with you doing the thing.</p>
+  <footer class="plate"><span>Plate 03 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Spend under a minute here. The one promise to repeat: roughly a third of the hour is theirs &mdash; 22 of 60 minutes are checkpoint time. Full run-of-show with exact timings is on plate 16 and in the handout.</p>
+  </aside>
+</section>
+
+<!-- ============ 04 ACT 1: ANATOMY ============ -->
+<section class="slide" data-title="Act 1: Anatomy of a skill">
+  <p class="eyebrow">Act 1 &middot; Anatomy</p>
+  <h1>A skill is three layers in one file</h1>
+  <figure>
+    <svg viewBox="0 0 960 330" role="img" aria-label="Anatomy of a SKILL.md file: frontmatter, operating rules, and pointers to references">
+      <!-- file body -->
+      <rect x="40" y="20" width="480" height="290" class="svg-box" />
+      <!-- frontmatter band -->
+      <rect x="40" y="20" width="480" height="86" class="svg-sig" />
+      <text x="60" y="48" font-size="12" class="svg-ink">--- FRONTMATTER ---</text>
+      <text x="60" y="70" font-size="11" class="svg-ink2">name &middot; description &middot; license</text>
+      <text x="60" y="90" font-size="11" class="svg-ink2">metadata.version &middot; metadata.source</text>
+      <!-- rules band -->
+      <line x1="40" y1="106" x2="520" y2="106" class="svg-line" />
+      <text x="60" y="134" font-size="12" class="svg-ink">## OPERATING RULES</text>
+      <text x="60" y="156" font-size="11" class="svg-ink2">1. gather evidence first</text>
+      <text x="60" y="176" font-size="11" class="svg-ink2">2. smallest mode that fits</text>
+      <text x="60" y="196" font-size="11" class="svg-ink2">&hellip;</text>
+      <text x="60" y="216" font-size="11" class="svg-ink2">11. validate before final response</text>
+      <!-- pointers band -->
+      <line x1="40" y1="236" x2="520" y2="236" class="svg-hair" />
+      <text x="60" y="264" font-size="12" class="svg-ink">## POINTERS</text>
+      <text x="60" y="286" font-size="11" class="svg-ink2">load references/&hellip; when needed</text>
+      <!-- annotations -->
+      <line x1="520" y1="62"  x2="610" y2="62"  class="svg-sigline" />
+      <text x="622" y="58" font-size="12" class="svg-ink">TRIGGER SURFACE</text>
+      <text x="622" y="76" font-size="11" class="svg-ink2">how the agent decides to load it</text>
+      <line x1="520" y1="170" x2="610" y2="170" class="svg-line" />
+      <text x="622" y="166" font-size="12" class="svg-ink">BEHAVIOR CONTRACT</text>
+      <text x="622" y="184" font-size="11" class="svg-ink2">what it must do once loaded</text>
+      <line x1="520" y1="272" x2="610" y2="272" class="svg-line" />
+      <text x="622" y="268" font-size="12" class="svg-ink">PROGRESSIVE DISCLOSURE</text>
+      <text x="622" y="286" font-size="11" class="svg-ink2">depth without context cost</text>
+    </svg>
+    <figcaption>Fig 2 &middot; Anatomy of a SKILL.md &middot; Source: <a href="https://github.com/zakelfassi/htmlify">zakelfassi/htmlify, skills/htmlify/SKILL.md</a></figcaption>
+  </figure>
+  <footer class="plate"><span>Plate 04 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>The mental model for the whole hour. Frontmatter is read by the harness to decide whether to load the skill at all &mdash; it is marketing copy aimed at a model. The body is the contract once loaded. References are the library the body points into.</p>
+    <p>Each layer has a different failure mode, and each act of this workshop covers one layer.</p>
+  </aside>
+</section>
+
+<!-- ============ 05 FRONTMATTER ============ -->
+<section class="slide" data-title="Description is the trigger">
+  <p class="eyebrow">Act 1 &middot; Anatomy</p>
+  <h1>The description is the trigger surface</h1>
+  <div class="well">
+    <div class="well-meta">yaml &middot; skills/htmlify/SKILL.md (frontmatter, abridged)</div>
+    <pre>---
+name: htmlify
+description: <span class="hl">Create self-contained HTML artifacts</span> from agent or repo
+  context, including <span class="hl">operator briefs, build plans, implementation maps,
+  PR/release packets, incident timelines</span>, &hellip; <span class="hl">Use when the user asks</span>
+  to turn dense text, code evidence, plans, reviews, or status into
+  browser-ready HTML instead of a markdown wall.
+license: Apache-2.0
+metadata:
+  version: "0.3.1"
+  source: "https://github.com/zakelfassi/htmlify"
+---</pre>
+  </div>
+  <ul>
+    <li><strong>Specific verbs</strong> &mdash; &ldquo;create self-contained HTML artifacts&rdquo;, not &ldquo;helps with HTML&rdquo;.</li>
+    <li><strong>Artifact nouns</strong> &mdash; the things users actually ask for, by name.</li>
+    <li><strong>&ldquo;Use when&hellip;&rdquo;</strong> &mdash; describes the <em>request</em>, from the user's side of the conversation.</li>
+    <li><strong>Versioned and licensed</strong> &mdash; <span class="mono">metadata.version</span> is bumped by release automation, not by hand.</li>
+  </ul>
+  <footer class="plate"><span>Plate 05 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Walk the highlighted spans in order: verb phrase, noun list, use-when clause. The harness matches incoming requests against this text &mdash; nothing else. If a request shape is not somewhere in this paragraph, the skill is invisible for that request.</p>
+    <p>Mention the comment trick in the real file: the version line carries an x-release-please-version marker so CI bumps it. Even frontmatter can be automated.</p>
+  </aside>
+</section>
+
+<!-- ============ 06 PROGRESSIVE DISCLOSURE ============ -->
+<section class="slide" data-title="Progressive disclosure">
+  <p class="eyebrow">Act 1 &middot; Anatomy</p>
+  <h1>SKILL.md stays short; references/ carry the depth</h1>
+  <figure>
+    <svg viewBox="0 0 960 300" role="img" aria-label="Tree showing SKILL.md always loaded, with references loaded on demand">
+      <!-- root -->
+      <rect x="50" y="110" width="240" height="80" class="svg-sig" />
+      <text x="170" y="142" text-anchor="middle" font-size="13" class="svg-ink">SKILL.md</text>
+      <text x="170" y="162" text-anchor="middle" font-size="10" class="svg-ink2">~190 LINES &middot; ALWAYS LOADED</text>
+      <!-- branches -->
+      <path d="M290 150 H350 V55  H410" class="svg-line" />
+      <path d="M290 150 H350 V125 H410" class="svg-line" />
+      <path d="M290 150 H350 V195 H410" class="svg-line" />
+      <path d="M290 150 H350 V265 H410" class="svg-line" />
+      <!-- leaves -->
+      <rect x="410" y="30"  width="330" height="50" class="svg-box" />
+      <text x="430" y="51"  font-size="12" class="svg-ink">references/hardcopy.md</text>
+      <text x="430" y="69"  font-size="10" class="svg-ink2">DESIGN TOKENS &middot; THE SEVEN DEVICES</text>
+      <rect x="410" y="100" width="330" height="50" class="svg-box" />
+      <text x="430" y="121" font-size="12" class="svg-ink">references/deck-template.md</text>
+      <text x="430" y="139" font-size="10" class="svg-ink2">DOM CONTRACT THE VALIDATOR ENFORCES</text>
+      <rect x="410" y="170" width="330" height="50" class="svg-box" />
+      <text x="430" y="191" font-size="12" class="svg-ink">references/htmlify-principles.md</text>
+      <text x="430" y="209" font-size="10" class="svg-ink2">MODE SELECTION &middot; DEEPER PATTERNS</text>
+      <rect x="410" y="240" width="330" height="50" class="svg-box" />
+      <text x="430" y="261" font-size="12" class="svg-ink">references/agent-integrations.md</text>
+      <text x="430" y="279" font-size="10" class="svg-ink2">INSTALL PATHS FOR OTHER AGENTS</text>
+      <!-- legend -->
+      <text x="770" y="121" font-size="10" class="svg-ink2">LOADED ON</text>
+      <text x="770" y="136" font-size="10" class="svg-ink2">DEMAND ONLY</text>
+    </svg>
+    <figcaption>Fig 3 &middot; Progressive disclosure in the htmlify skill family &middot; Source: <a href="https://github.com/zakelfassi/htmlify">zakelfassi/htmlify, skills/</a></figcaption>
+  </figure>
+  <p>Every token in SKILL.md is paid on <em>every</em> triggered request. Reference files are paid only when the task needs them &mdash; so the skill says exactly <em>when</em> to load each one.</p>
+  <footer class="plate"><span>Plate 06 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>This is an economics argument, not a style preference. A 2,000-line SKILL.md taxes every single invocation; a 190-line one with four references taxes only what the task touches.</p>
+    <p>Read one pointer sentence aloud from htmlify: &ldquo;Load references/hardcopy.md for the token block&hellip; before styling any artifact.&rdquo; The pointer names the file AND the condition. That conditional phrasing is the craft.</p>
+  </aside>
+</section>
+
+<!-- ============ 07 CHECKPOINT 1 ============ -->
+<section class="slide" data-title="Checkpoint 1: Write a description">
+  <span class="stamp signal">Checkpoint 1 &middot; 7 min</span>
+  <h1>Write the frontmatter description for your skill idea</h1>
+  <div class="cols">
+    <div class="worksheet">
+      <div class="ws-label">Worksheet &middot; also in the handout</div>
+      <p class="mono muted">name:</p>
+      <div class="blank-line"></div>
+      <p class="mono muted">description: (3&ndash;5 sentences)</p>
+      <div class="blank-line"></div>
+      <div class="blank-line"></div>
+      <div class="blank-line"></div>
+    </div>
+    <div>
+      <h2>Scoring criteria</h2>
+      <ol>
+        <li><strong>Specific verbs:</strong> what it produces or does, concretely.</li>
+        <li><strong>Artifact nouns:</strong> the outputs named the way users name them.</li>
+        <li><strong>&ldquo;Use when&hellip;&rdquo; clause:</strong> request shapes, quoted in user language.</li>
+        <li><strong>Bounded:</strong> says what it is <em>not</em> for if a sibling skill exists.</li>
+      </ol>
+      <p class="muted">Test: would a stranger reading nothing but your description know exactly which requests should fire it &mdash; and which should not?</p>
+    </div>
+  </div>
+  <footer class="plate"><span>Plate 07 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Set a visible 7-minute timer. No skill idea? Offer one: a skill that turns merged PRs into release notes. Circulate and look for the classic miss: descriptions written from the implementation's point of view (&ldquo;parses git log&rdquo;) instead of the request's (&ldquo;use when the user asks what shipped&rdquo;).</p>
+    <p>Close with two volunteers reading theirs aloud; have the room vote: would it trigger? A solution sketch is in the handout.</p>
+  </aside>
+</section>
+
+<!-- ============ 08 ACT 2: OPERATING RULES ============ -->
+<section class="slide" data-title="Act 2: Operating rules">
+  <p class="eyebrow">Act 2 &middot; Rules</p>
+  <h1>Rules an agent will actually follow</h1>
+  <div class="well">
+    <div class="well-meta">markdown &middot; skills/htmlify/SKILL.md (operating rules, abridged)</div>
+    <pre>## Operating Rules
+
+1. <span class="hl">Gather evidence first.</span> Read the repo, docs, git state, PR/CI/deploy
+   state, logs, &hellip; Mark uncertain claims as `needs verification`.
+2. <span class="hl">Pick the smallest artifact mode that fits</span> the request:
+   - `operator-brief`: what happened, what is next, blockers, risks&hellip;
+   - `build-plan`: problem, target shape, phases, owners, validation&hellip;
+4. <span class="hl">Keep it self-contained.</span> Inline CSS and JS; no external fonts,
+   CDNs, assets, analytics, or build step unless the user explicitly asks.
+11. <span class="hl">Validate before final response:</span> doctype, standalone
+    &lt;html&gt;/&lt;body&gt;, no missing local assets, expected sections&hellip;</pre>
+  </div>
+  <p>Numbered, imperative, and ordered as a procedure: evidence &rarr; mode choice &rarr; constraints &rarr; validation. An agent can cite &ldquo;rule 4&rdquo; back to you; it cannot cite a vibe.</p>
+  <footer class="plate"><span>Plate 08 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Three properties to call out: numbered (referenceable, diffable in review), imperative (each starts with a verb the agent performs), ordered (the numbering encodes the workflow itself &mdash; you cannot validate before you have evidence).</p>
+    <p>Evidence-first as rule 1 is deliberate: it is the rule that stops an agent from hallucinating a status report instead of reading the repo.</p>
+  </aside>
+</section>
+
+<!-- ============ 09 SMALLEST MODE ============ -->
+<section class="slide" data-title="Smallest mode that fits">
+  <p class="eyebrow">Act 2 &middot; Rules</p>
+  <h1>A mode menu is a decision procedure</h1>
+  <table class="matrix">
+    <thead><tr><th>deckify mode</th><th>Choose when the user wants&hellip;</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">talk-deck</td><td>a YouTube/live presentation with speaker notes and run-of-show</td></tr>
+      <tr><td class="mono">workshop-deck</td><td>a talk <em>plus</em> exercises, labs, checkpoints, and handouts &mdash; this deck</td></tr>
+      <tr><td class="mono">essay-deck</td><td>a presentation plus a downloadable long-form guide</td></tr>
+      <tr><td class="mono">demo-deck</td><td>a session centered on live demos with fallback screenshots</td></tr>
+      <tr><td class="mono">launch-deck</td><td>product narrative, proof, risks, roadmap, and a CTA</td></tr>
+      <tr><td class="mono">teaching-guide</td><td>a PDF-first guide with an optional slide mode</td></tr>
+    </tbody>
+  </table>
+  <p>&ldquo;Smallest mode that fits&rdquo; converts a fuzzy judgment call into a lookup. The agent stops guessing scope; the user gets predictable shapes.</p>
+  <footer class="plate"><span>Plate 09 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>The deeper pattern: wherever your skill would otherwise say &ldquo;use judgment&rdquo;, try to replace it with an enumerated menu plus a selection rule. Six named modes beat one paragraph of &ldquo;adapt as appropriate&rdquo;.</p>
+    <p>Point out the self-reference &mdash; this session asked for exercises, labs, and a handout, so workshop-deck was the smallest fit. The mode is even printed in the slide footer.</p>
+  </aside>
+</section>
+
+<!-- ============ 10 ANTI-PATTERNS ============ -->
+<section class="slide" data-title="Vague vibes vs testable rules">
+  <p class="eyebrow">Act 2 &middot; Rules</p>
+  <h1>Anti-pattern: rules you cannot test</h1>
+  <table class="matrix">
+    <thead><tr><th>Vague vibe</th><th>Testable rule (from this repo's skills)</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>&ldquo;Make it look professional&rdquo;</td>
+        <td>Default to the Hardcopy tokens: one accent color, hairlines over shadows, border-radius &le; 2px, serif display headings.</td>
+      </tr>
+      <tr>
+        <td>&ldquo;Should work offline&rdquo;</td>
+        <td>Inline all CSS/JS; no external fonts, CDNs, or remote assets &mdash; the validator errors on any remote reference.</td>
+      </tr>
+      <tr>
+        <td>&ldquo;Help the presenter&rdquo;</td>
+        <td>Every substantive slide contains <span class="mono">&lt;aside class="notes"&gt;</span>; the validator reports each missing one by slide number.</td>
+      </tr>
+      <tr>
+        <td>&ldquo;Keep it reasonable in size&rdquo;</td>
+        <td>Warn above 512 KiB; hard error above 2 MiB.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Litmus test: <strong>could a script check it?</strong> If yes, it is a rule. If no, it is a hope. Unbounded scope (&ldquo;and anything else useful&rdquo;) fails the same test.</p>
+  <footer class="plate"><span>Plate 10 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Read one left cell deadpan, then its right cell. The right column is not stricter prose &mdash; it is the same intent made checkable. Every right-hand rule here is literally enforced by code in this repo, which is the bridge to Act 3.</p>
+    <p>The litmus question &mdash; could a script check it? &mdash; is the single most quotable line of the hour. Say it twice.</p>
+  </aside>
+</section>
+
+<!-- ============ 11 CHECKPOINT 2 ============ -->
+<section class="slide" data-title="Checkpoint 2: Vague to testable">
+  <span class="stamp signal">Checkpoint 2 &middot; 7 min</span>
+  <h1>Convert three vague instructions into testable rules</h1>
+  <div class="worksheet" style="max-width:72ch">
+    <div class="ws-label">Rewrite each so a script &mdash; or a strict reviewer &mdash; could verify compliance</div>
+    <ol>
+      <li>&ldquo;Make the output look nice.&rdquo;</li>
+      <li>&ldquo;Don't make the file too big.&rdquo;</li>
+      <li>&ldquo;Add some interactivity if it helps.&rdquo;</li>
+    </ol>
+  </div>
+  <h2 style="margin-top:16px">A good rewrite has</h2>
+  <ul>
+    <li>a <strong>named standard</strong> (a token set, a template, a contract file) instead of an adjective,</li>
+    <li>a <strong>number or enumerable condition</strong> where one exists,</li>
+    <li>a <strong>consequence</strong>: what happens, or what check fails, when it is violated.</li>
+  </ul>
+  <footer class="plate"><span>Plate 11 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Seven minutes, pairs work well. Push anyone who just adds adverbs (&ldquo;make it look really consistent&rdquo;) &mdash; that is still a vibe. The move is always: name a standard, attach a number, state the failing check.</p>
+    <p>Debrief one answer per item. Solution sketches are in the handout under Exercise 2 &mdash; they map to real rules in htmlify and deckify, so attendees can diff their answers against shipped ones.</p>
+  </aside>
+</section>
+
+<!-- ============ 12 ACT 3: VERIFIABLE ============ -->
+<section class="slide" data-title="Act 3: Verifiable output">
+  <p class="eyebrow">Act 3 &middot; Verify</p>
+  <h1>A skill that can check its own output beats one that hopes</h1>
+  <figure>
+    <svg viewBox="0 0 960 270" role="img" aria-label="Validation loop: agent writes artifact, runs validator, fixes errors, ships at zero errors, CI re-validates">
+      <rect x="40"  y="90" width="200" height="64" class="svg-box" />
+      <text x="140" y="117" text-anchor="middle" font-size="12" class="svg-ink">AGENT WRITES</text>
+      <text x="140" y="136" text-anchor="middle" font-size="11" class="svg-ink2">artifact.html</text>
+      <rect x="300" y="90" width="200" height="64" class="svg-box" />
+      <text x="400" y="117" text-anchor="middle" font-size="12" class="svg-ink">RUNS VALIDATOR</text>
+      <text x="400" y="136" text-anchor="middle" font-size="11" class="svg-ink2">--validate --profile deck</text>
+      <rect x="560" y="90" width="150" height="64" class="svg-box" />
+      <text x="635" y="117" text-anchor="middle" font-size="12" class="svg-ink">ERRORS?</text>
+      <text x="635" y="136" text-anchor="middle" font-size="11" class="svg-ink2">read codes</text>
+      <rect x="770" y="90" width="150" height="64" class="svg-sig" />
+      <text x="845" y="117" text-anchor="middle" font-size="12" class="svg-ink">SHIP</text>
+      <text x="845" y="136" text-anchor="middle" font-size="11" class="svg-sigink">0 ERRORS</text>
+      <!-- forward arrows -->
+      <path d="M240 122 H292" class="svg-line" />
+      <path d="M292 122 l-8 -4 v8 z" class="svg-ink" />
+      <path d="M500 122 H552" class="svg-line" />
+      <path d="M552 122 l-8 -4 v8 z" class="svg-ink" />
+      <path d="M710 122 H762" class="svg-line" />
+      <path d="M762 122 l-8 -4 v8 z" class="svg-ink" />
+      <text x="736" y="110" text-anchor="middle" font-size="10" class="svg-ink2">NO</text>
+      <!-- fix loop -->
+      <path d="M635 154 V210 H140 V158" class="svg-line" />
+      <path d="M140 158 l-4 8 h8 z" class="svg-ink" />
+      <text x="388" y="202" text-anchor="middle" font-size="11" class="svg-ink">YES &rarr; FIX &amp; RE-RUN</text>
+      <!-- CI note -->
+      <path d="M845 154 V232" class="svg-hair" />
+      <text x="845" y="252" text-anchor="middle" font-size="11" class="svg-ink2">CI RE-VALIDATES COMMITTED EXAMPLES</text>
+      <!-- skill note -->
+      <text x="140" y="66" text-anchor="middle" font-size="11" class="svg-ink2">SKILL.MD ORDERS THIS LOOP</text>
+      <path d="M140 74 V86" class="svg-hair" />
+    </svg>
+    <figcaption>Fig 4 &middot; The validation loop the deckify skill mandates before any final response</figcaption>
+  </figure>
+  <footer class="plate"><span>Plate 12 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>This is the act 3 thesis and the strongest idea of the workshop. A skill without a checker relies on the model's self-assessment; a skill with a checker turns quality into a loop that terminates at zero errors.</p>
+    <p>Note the two enforcement points: the agent validates before responding (skill rule), and CI validates whatever gets committed (repo rule). The skill can be ignored; CI cannot.</p>
+  </aside>
+</section>
+
+<!-- ============ 13 CASE STUDY ============ -->
+<section class="slide" data-title="Case study: the deck profile">
+  <p class="eyebrow">Act 3 &middot; Verify</p>
+  <h1>Case study: what <span class="mono" style="font-size:0.7em">--profile deck</span> enforces</h1>
+  <table class="matrix">
+    <thead><tr><th>Contract item</th><th>Check</th><th>Severity</th></tr></thead>
+    <tbody>
+      <tr><td>Standalone document</td><td>doctype, one <span class="mono">&lt;html&gt;</span>/<span class="mono">&lt;body&gt;</span>, non-empty title, viewport meta</td><td class="mono">error</td></tr>
+      <tr><td>Slides</td><td>&ge; 2 <span class="mono">&lt;section class="slide"&gt;</span> elements</td><td class="mono">error</td></tr>
+      <tr><td>Keyboard nav</td><td>a script registering a <span class="mono">keydown</span> listener</td><td class="mono">error</td></tr>
+      <tr><td>Speaker notes</td><td>every substantive slide has <span class="mono">&lt;aside class="notes"&gt;</span>, reported per slide</td><td class="mono">error</td></tr>
+      <tr><td>Script safety</td><td>inline script only; no handler attributes; no <span class="mono">javascript:</span> URLs</td><td class="mono">error</td></tr>
+      <tr><td>Self-contained</td><td>no remote assets, fonts, or stylesheet links</td><td class="mono">error</td></tr>
+      <tr><td>Print mode</td><td><span class="mono">@media print</span> rules for the handout</td><td class="mono">warning</td></tr>
+      <tr><td>Size</td><td>&gt; 512 KiB warns; &gt; 2 MiB errors</td><td class="mono">both</td></tr>
+    </tbody>
+  </table>
+  <p>The contract lives in <span class="mono">references/deck-template.md</span>; the code lives in <span class="mono">src/validate.js</span>. Doc and check ship together, in the same repo, versioned together.</p>
+  <footer class="plate"><span>Plate 13 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>The design insight: every row started life as a sentence in the skill. &ldquo;Add speaker notes for every substantive slide&rdquo; became a per-slide error with the slide number in the message. Good error messages are part of the skill's UX &mdash; the agent fixing them is the reader.</p>
+    <p>This very deck passes this very table. If anyone doubts it, checkpoint 3 is about to let them run the tool themselves.</p>
+  </aside>
+</section>
+
+<!-- ============ 14 CHECKPOINT 3: LAB ============ -->
+<section class="slide" data-title="Checkpoint 3: Validator lab">
+  <span class="stamp signal">Checkpoint 3 &middot; Lab &middot; 8 min</span>
+  <h1>Break it, validate it, fix it</h1>
+  <div class="cols">
+    <div>
+      <div class="well">
+        <div class="well-meta">shell &middot; from the repo root</div>
+        <pre>node bin/htmlify-answer.js --validate \
+  lab/broken-deck.html --profile deck</pre>
+      </div>
+      <div class="well">
+        <div class="well-meta">expected validator output</div>
+        <pre>lab/broken-deck.html: INVALID &mdash; 4 errors
+  [no-viewport]      missing viewport meta tag
+  [no-slides]        found 1, need &ge; 2
+  [no-keyboard-nav]  no keydown listener
+  [missing-notes]    slide 1 ("Demo")</pre>
+      </div>
+    </div>
+    <div>
+      <h2>Steps</h2>
+      <ol>
+        <li>Copy the broken snippet from the handout (Exercise 3) into <span class="mono">lab/broken-deck.html</span>.</li>
+        <li>Run the validator. Read each error code.</li>
+        <li>Fix <em>one error at a time</em>; re-run after each fix.</li>
+        <li>Stop at: <span class="mono">valid &mdash; 0 errors</span>.</li>
+      </ol>
+      <p class="muted">Finished early? Run it against this deck file and read what a passing report looks like.</p>
+    </div>
+  </div>
+  <footer class="plate"><span>Plate 14 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>The point is not HTML repair &mdash; it is feeling the loop: run, read a code, fix, re-run, watch the error count fall to zero. That loop is what their own skill should give its agent.</p>
+    <p>Common snags: running outside the repo root (the bin path is relative), and fixing notes by adding the aside without the class attribute. Both produce teachable re-runs. The full broken snippet and a fixed sketch are in the handout.</p>
+  </aside>
+</section>
+
+<!-- ============ 15 FAILURE MODES ============ -->
+<section class="slide" data-title="Failure modes">
+  <p class="eyebrow">Field guide</p>
+  <h1>Three ways skills die</h1>
+  <table class="matrix">
+    <thead><tr><th>Failure</th><th>Symptom</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="stamp risk">Never triggers</span></td>
+        <td>Description written from the implementation's side (&ldquo;parses AST&hellip;&rdquo;); users' actual words appear nowhere.</td>
+        <td>Rewrite from the requester's side: verbs, artifact nouns, quoted &ldquo;use when&rdquo; phrases.</td>
+      </tr>
+      <tr>
+        <td><span class="stamp warn">Triggers too much</span></td>
+        <td>Grabby verbs and unbounded nouns (&ldquo;helps with any web content&rdquo;); fires on requests it handles badly.</td>
+        <td>Narrow the nouns; name what it is <em>not</em> for; point sideways at sibling skills.</td>
+      </tr>
+      <tr>
+        <td><span class="stamp warn">Monolithic</span></td>
+        <td>2,000-line SKILL.md taxing every invocation; agents skim and miss the rules that matter.</td>
+        <td>Keep SKILL.md to rules and pointers; move depth to <span class="mono">references/</span> with load-when conditions.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>htmlify and deckify dodge the second failure by pointing at each other: htmlify's rule 8 sends full presentation requests to deckify.</p>
+  <footer class="plate"><span>Plate 15 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>Diagnosis order matters: triggering failures are invisible (the skill silently never loads), so check the description first whenever a skill &ldquo;does not work&rdquo;. Over-triggering shows up as the skill butting into the wrong tasks. Monolith rot shows up as rule non-compliance despite the rule existing.</p>
+    <p>The cross-pointer pattern &mdash; sibling skills explicitly routing to each other &mdash; is the cheapest fix for boundary disputes between skills.</p>
+  </aside>
+</section>
+
+<!-- ============ 16 RUN OF SHOW ============ -->
+<section class="slide" data-title="Run of show">
+  <p class="eyebrow">Logistics</p>
+  <h1>Run of show</h1>
+  <table class="matrix">
+    <thead><tr><th>Clock</th><th>Chapter</th><th>Beat</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">00:00</td><td>Opening</td><td>Promise, audience, setup check (Node 20+, repo clone)</td></tr>
+      <tr><td class="mono">05:00</td><td>Act 1 &middot; Anatomy</td><td>Three layers; frontmatter as trigger surface; references/</td></tr>
+      <tr><td class="mono">15:00</td><td>Checkpoint 1</td><td>Write a frontmatter description &middot; debrief two aloud</td></tr>
+      <tr><td class="mono">22:00</td><td>Act 2 &middot; Rules</td><td>Numbered rules; smallest mode; vague-vs-testable</td></tr>
+      <tr><td class="mono">32:00</td><td>Checkpoint 2</td><td>Three vague instructions &rarr; testable rules &middot; debrief</td></tr>
+      <tr><td class="mono">39:00</td><td>Act 3 &middot; Verify</td><td>Validation loop; the deck-profile case study</td></tr>
+      <tr><td class="mono">47:00</td><td>Checkpoint 3</td><td>Lab: validate and fix the broken snippet</td></tr>
+      <tr><td class="mono">55:00</td><td>Close</td><td>Failure modes recap; checklist; print the handout</td></tr>
+      <tr><td class="mono">60:00</td><td>End</td><td>&mdash;</td></tr>
+    </tbody>
+  </table>
+  <footer class="plate"><span>Plate 16 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>If running long, compress Act 2 teaching (plates 9&ndash;10) before touching any checkpoint &mdash; the exercises are the workshop. Checkpoint 3 needs its full 8 minutes; first-time validator runs always surprise someone.</p>
+    <p>For a recorded/YouTube cut, these chapter rows paste straight into the description as timestamps.</p>
+  </aside>
+</section>
+
+<!-- ============ 17 CLOSING ============ -->
+<section class="slide" data-title="Closing checklist">
+  <p class="eyebrow">Close</p>
+  <h1>Ship your skill against this checklist</h1>
+  <div class="cols">
+    <div>
+      <ol>
+        <li>Description has verbs, artifact nouns, and a &ldquo;use when&rdquo; clause.</li>
+        <li><span class="mono">license</span> and <span class="mono">metadata.version</span> are set.</li>
+        <li>Rules are numbered, imperative, and ordered as a procedure.</li>
+        <li>Evidence-first is rule 1; a mode menu replaces &ldquo;use judgment&rdquo;.</li>
+        <li>Every rule passes the litmus test: a script could check it.</li>
+        <li>Depth lives in <span class="mono">references/</span> with load-when pointers.</li>
+        <li>A validation command exists &mdash; and the skill orders the agent to run it.</li>
+        <li>CI re-validates whatever examples you commit.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>Sources</h2>
+      <ul class="mono" style="font-size:12.5px">
+        <li><a href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a> &mdash; the worked example</li>
+        <li><a href="https://agentskills.io">agentskills.io</a> &mdash; the skill format</li>
+        <li>skills/htmlify/SKILL.md &middot; skills/deckify/SKILL.md</li>
+        <li>skills/deckify/references/deck-template.md</li>
+        <li>skills/deckify/references/hardcopy.md</li>
+      </ul>
+      <p style="margin-top:14px">Press <strong>G</strong> for the handout; print it from there for the PDF.</p>
+    </div>
+  </div>
+  <footer class="plate"><span>Plate 17 / 17 &middot; Workshop-Deck</span><span>Authoring Agent Skills</span></footer>
+  <aside class="notes">
+    <p>End on the loop, not the list: describe precisely, rule testably, validate mechanically. Then the kicker &mdash; this deck was produced by a skill following every item on this checklist, and it validates with zero errors. They watched the receipts all hour.</p>
+    <p>Last call: open the guide, hit print, leave with the handout. Ask them to ship one skill this week and file an issue on the repo with what broke.</p>
+  </aside>
+</section>
+
+</main>
+
+<aside class="notes-panel" id="notes-panel" hidden>
+  <div class="np-label" id="notes-label">Speaker notes</div>
+  <div id="notes-body"></div>
+</aside>
+
+<!-- ============ GUIDE / HANDOUT ============ -->
+<article class="guide" id="guide">
+  <p class="eyebrow">Workshop handout &middot; keep after the session</p>
+  <h1>Authoring Agent Skills &mdash; Workshop Guide</h1>
+  <div class="guide-plate">
+    <div class="cell sig"><span class="lbl">Mode</span>workshop-deck</div>
+    <div class="cell"><span class="lbl">Duration</span>60 minutes</div>
+    <div class="cell"><span class="lbl">Source repo</span>zakelfassi/htmlify</div>
+    <div class="cell"><span class="lbl">Format</span>agentskills.io</div>
+  </div>
+  <div class="guide-actions">
+    <button type="button" id="print-guide">Print this handout (PDF)</button>
+  </div>
+  <p>This is not a transcript. It is the part of the workshop you will want at your desk next week: the three act summaries, the three exercises with hints and solution sketches, the skill-authoring checklist, and references.</p>
+
+  <h2><span class="secno">1.0</span>Act 1 &mdash; Anatomy of a skill</h2>
+  <p>A skill is a single <span class="mono">SKILL.md</span> with three layers that fail in three different ways:</p>
+  <ul>
+    <li><strong>Frontmatter</strong> (<span class="mono">name</span>, <span class="mono">description</span>, <span class="mono">license</span>, <span class="mono">metadata.version</span>, <span class="mono">metadata.source</span>). The <em>description is the trigger surface</em>: the harness matches incoming requests against this text alone. Write it from the requester's side of the conversation &mdash; specific verbs, artifact nouns, and a literal &ldquo;Use when&hellip;&rdquo; clause quoting how users actually ask.</li>
+    <li><strong>Body</strong>: numbered operating rules, a mode menu, validation orders, and a final-response contract. This is the behavior contract once the skill is loaded.</li>
+    <li><strong>Pointers into <span class="mono">references/</span></strong>: depth that is loaded on demand. Every token in SKILL.md is paid on every triggered request; reference files are paid only when needed. Each pointer should name the file <em>and</em> the condition: &ldquo;Load references/hardcopy.md &hellip; before styling any artifact.&rdquo;</li>
+  </ul>
+
+  <h2><span class="secno">2.0</span>Act 2 &mdash; Operating rules agents follow</h2>
+  <p>Rules that survive contact with an agent share three properties:</p>
+  <ul>
+    <li><strong>Numbered and imperative.</strong> &ldquo;1. Gather evidence first.&rdquo; An agent can cite rule numbers; it cannot cite vibes. The ordering encodes the workflow: evidence &rarr; mode &rarr; constraints &rarr; validation.</li>
+    <li><strong>Smallest mode that fits.</strong> Replace &ldquo;use judgment&rdquo; with an enumerated menu plus a selection rule. htmlify names ten artifact modes; deckify names six deck modes. The menu turns scope guessing into a lookup.</li>
+    <li><strong>Testable, not vague.</strong> The litmus test: <em>could a script check it?</em> &ldquo;Look professional&rdquo; is a hope; &ldquo;one accent color, hairlines over shadows, radius &le; 2px&rdquo; is a rule. Unbounded scope (&ldquo;and anything else useful&rdquo;) fails the same test.</li>
+  </ul>
+
+  <h2><span class="secno">3.0</span>Act 3 &mdash; Making output verifiable</h2>
+  <p>A skill that can check its own output beats one that hopes. The htmlify repo demonstrates the full pattern:</p>
+  <ul>
+    <li>The skill <em>orders the loop</em>: &ldquo;Before the final response, run the bundled validator &hellip; Fix every reported error before responding; report remaining warnings.&rdquo;</li>
+    <li>The contract is documented next to the code: <span class="mono">references/deck-template.md</span> describes the DOM contract; <span class="mono">src/validate.js</span> enforces it; both version together.</li>
+    <li>Two enforcement points: the agent validates before responding (skill rule), and CI re-validates every committed example (repo rule). The skill can be ignored; CI cannot.</li>
+    <li>Error messages are agent UX: &ldquo;Substantive slide 7 has no speaker notes&rdquo; is fixable in one step; &ldquo;invalid deck&rdquo; is not.</li>
+  </ul>
+
+  <h2><span class="secno">4.0</span>Exercise 1 &mdash; Write a trigger description</h2>
+  <div class="ex">
+    <div class="ex-label">Exercise 1 &middot; 7 min</div>
+    <p><strong>Task.</strong> Pick a workflow you repeat with your agent. Write the frontmatter <span class="mono">name</span> and a 3&ndash;5 sentence <span class="mono">description</span>.</p>
+    <p><strong>Hints.</strong> Start with the verb and the artifact (&ldquo;Generate release notes&hellip;&rdquo;). List the output nouns the way users say them. End with a &ldquo;Use when the user asks&hellip;&rdquo; clause quoting 2&ndash;3 real request phrasings. If a sibling skill exists, say what this one is <em>not</em> for.</p>
+    <p><strong>Solution sketch</strong> (for a release-notes skill):</p>
+    <div class="well"><div class="well-meta">yaml &middot; sample answer</div><pre>name: release-notes
+description: Generate release notes and changelogs from merged PRs
+  and commit history, producing version-grouped markdown and a
+  paste-ready announcement. Use when the user asks to "write release
+  notes", "summarize what shipped", or turn git history into an
+  announcement. Not for live deploy status &mdash; use a status skill.</pre></div>
+  </div>
+
+  <h2><span class="secno">5.0</span>Exercise 2 &mdash; Vague to testable</h2>
+  <div class="ex">
+    <div class="ex-label">Exercise 2 &middot; 7 min</div>
+    <p><strong>Task.</strong> Rewrite each instruction so a script &mdash; or a strict reviewer &mdash; could verify compliance.</p>
+    <ol>
+      <li>&ldquo;Make the output look nice.&rdquo;</li>
+      <li>&ldquo;Don't make the file too big.&rdquo;</li>
+      <li>&ldquo;Add some interactivity if it helps.&rdquo;</li>
+    </ol>
+    <p><strong>Hints.</strong> Name a standard instead of an adjective; attach a number where one exists; state which check fails on violation.</p>
+    <p><strong>Solution sketches</strong> (each maps to a shipped rule in this repo):</p>
+    <ol>
+      <li>&ldquo;Default to the Hardcopy design tokens: serif display headings, mono-uppercase metadata, at most one accent color, hairlines instead of shadows, border-radius &le; 2px. No gradients, no stock imagery.&rdquo;</li>
+      <li>&ldquo;Keep the artifact under 512 KiB; the validator warns above that and errors above 2 MiB.&rdquo;</li>
+      <li>&ldquo;For deck-style artifacts, add keyboard navigation (arrows, Home/End) registered with addEventListener in one inline script; inline handler attributes and external scripts are validator errors.&rdquo;</li>
+    </ol>
+  </div>
+
+  <h2><span class="secno">6.0</span>Exercise 3 &mdash; Validator lab</h2>
+  <div class="ex">
+    <div class="ex-label">Exercise 3 &middot; Lab &middot; 8 min</div>
+    <p><strong>Task.</strong> From a clone of <span class="mono">github.com/zakelfassi/htmlify</span>, save this deliberately broken snippet as <span class="mono">lab/broken-deck.html</span>:</p>
+    <div class="well"><div class="well-meta">html &middot; lab/broken-deck.html (broken on purpose)</div><pre>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8" /&gt;
+  &lt;title&gt;Lab deck&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;main class="deck-shell"&gt;
+    &lt;section class="slide active" data-title="Demo"&gt;
+      &lt;h2&gt;One idea, no notes&lt;/h2&gt;
+      &lt;table&gt;&lt;tr&gt;&lt;td&gt;evidence&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+    &lt;/section&gt;
+  &lt;/main&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre></div>
+    <p><strong>Run.</strong></p>
+    <div class="well"><div class="well-meta">shell &middot; repo root</div><pre>node bin/htmlify-answer.js --validate lab/broken-deck.html --profile deck</pre></div>
+    <p><strong>Expect four errors</strong>, then fix one at a time, re-running after each:</p>
+    <ol>
+      <li><span class="mono">no-viewport</span> &mdash; add the viewport <span class="mono">&lt;meta&gt;</span> to <span class="mono">&lt;head&gt;</span>.</li>
+      <li><span class="mono">no-slides</span> &mdash; a deck needs at least two <span class="mono">&lt;section class="slide"&gt;</span> elements; add a second slide.</li>
+      <li><span class="mono">no-keyboard-nav</span> &mdash; add one inline <span class="mono">&lt;script&gt;</span> that registers a <span class="mono">keydown</span> listener with addEventListener and toggles the <span class="mono">active</span> class on arrow keys.</li>
+      <li><span class="mono">missing-notes</span> &mdash; each substantive slide (200+ chars of text, or containing h2/h3/table/figure) needs <span class="mono">&lt;aside class="notes"&gt;</span> with real speaker notes.</li>
+    </ol>
+    <p><strong>Done when</strong> the report reads <span class="mono">valid &mdash; 0 errors</span>. Then run the same command against <span class="mono">examples/deckify/workshop-deck.html</span> to see a passing report for a full deck.</p>
+  </div>
+
+  <h2><span class="secno">7.0</span>Skill-authoring checklist</h2>
+  <ol>
+    <li>Frontmatter has <span class="mono">name</span> and a <span class="mono">description</span> written from the requester's side: specific verbs, artifact nouns, &ldquo;use when&rdquo; phrasings.</li>
+    <li><span class="mono">license</span>, <span class="mono">metadata.version</span>, and <span class="mono">metadata.source</span> are set; version bumping is automated where possible.</li>
+    <li>Operating rules are numbered, imperative, and ordered as the actual workflow.</li>
+    <li>Rule 1 is evidence-first: read the source material before producing anything.</li>
+    <li>A mode menu (&ldquo;smallest mode that fits&rdquo;) replaces open-ended judgment.</li>
+    <li>Every rule passes the litmus test: a script could check compliance.</li>
+    <li>Output constraints are explicit: self-contained, size-bounded, format-contracted.</li>
+    <li>Depth lives in <span class="mono">references/</span>; each pointer names the file and the load-when condition; SKILL.md stays short.</li>
+    <li>A validation command exists, the skill orders the agent to run it before the final response, and errors must reach zero.</li>
+    <li>CI re-validates committed examples, so the contract holds even when nobody is watching.</li>
+    <li>The skill defines its final-response contract: what to report (paths, mode, validation results, gaps).</li>
+    <li>Sibling skills point at each other to resolve boundary disputes (htmlify rule 8 routes full decks to deckify).</li>
+  </ol>
+
+  <h2><span class="secno">8.0</span>References</h2>
+  <ul>
+    <li class="refline"><a href="https://github.com/zakelfassi/htmlify">github.com/zakelfassi/htmlify</a> &mdash; the worked-example repo: skills, validator, CI, and this deck</li>
+    <li class="refline"><a href="https://agentskills.io">agentskills.io</a> &mdash; the SKILL.md format and compatible clients</li>
+    <li class="refline">skills/htmlify/SKILL.md &mdash; trigger description and operating rules studied in Act 1&ndash;2</li>
+    <li class="refline">skills/deckify/SKILL.md &mdash; the skill that produced this deck</li>
+    <li class="refline">skills/deckify/references/deck-template.md &mdash; the DOM contract the deck validator enforces</li>
+    <li class="refline">skills/deckify/references/hardcopy.md &mdash; the visual identity used by this handout</li>
+    <li class="refline">bin/htmlify-answer.js &middot; src/validate.js &mdash; the validation CLI from checkpoint 3</li>
+  </ul>
+  <p class="mono muted" style="margin-top:24px">Generated with the deckify skill &middot; validated with --profile deck &middot; 0 errors</p>
+</article>
+
+<script>
+(function () {
+  'use strict';
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var progress = document.getElementById('progress');
+  var notesPanel = document.getElementById('notes-panel');
+  var notesBody = document.getElementById('notes-body');
+  var notesLabel = document.getElementById('notes-label');
+  var guide = document.getElementById('guide');
+  var current = 0;
+  for (var i = 0; i < slides.length; i += 1) {
+    if (slides[i].classList.contains('active')) { current = i; break; }
+  }
+
+  function syncNotes() {
+    if (!notesBody) return;
+    var slide = slides[current];
+    var src = slide ? slide.querySelector('.notes') : null;
+    notesBody.innerHTML = src ? src.innerHTML : '<p>No notes for this slide.</p>';
+    if (notesLabel) {
+      notesLabel.textContent = 'Speaker notes · ' + (current + 1) + ' / ' + slides.length +
+        ' · ' + (slide.getAttribute('data-title') || '');
+    }
+  }
+
+  function show(index) {
+    current = Math.min(slides.length - 1, Math.max(0, index));
+    slides.forEach(function (slide, i) {
+      slide.classList.toggle('active', i === current);
+    });
+    if (progress) progress.textContent = (current + 1) + ' / ' + slides.length;
+    syncNotes();
+  }
+
+  function toggleNotes() {
+    if (!notesPanel) return;
+    notesPanel.hidden = !notesPanel.hidden;
+    if (!notesPanel.hidden) syncNotes();
+  }
+
+  function toggleGuide() {
+    var open = document.body.classList.toggle('guide-open');
+    if (guide) guide.hidden = !open;
+    window.scrollTo(0, 0);
+  }
+
+  document.addEventListener('keydown', function (event) {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    var tag = event.target && event.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    var key = event.key;
+    if (key === 'g' || key === 'G') { toggleGuide(); event.preventDefault(); return; }
+    if (document.body.classList.contains('guide-open')) {
+      if (key === 'Escape') { toggleGuide(); event.preventDefault(); }
+      return;
+    }
+    if (key === 'ArrowRight' || key === 'PageDown' || key === ' ') { show(current + 1); event.preventDefault(); }
+    else if (key === 'ArrowLeft' || key === 'PageUp') { show(current - 1); event.preventDefault(); }
+    else if (key === 'Home') { show(0); event.preventDefault(); }
+    else if (key === 'End') { show(slides.length - 1); event.preventDefault(); }
+    else if (key === 'n' || key === 'N') { toggleNotes(); event.preventDefault(); }
+    else if (key === 'Escape' && notesPanel && !notesPanel.hidden) { toggleNotes(); }
+  });
+
+  function wire(id, handler) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', handler);
+  }
+  wire('prev-slide', function () { show(current - 1); });
+  wire('next-slide', function () { show(current + 1); });
+  wire('toggle-notes', toggleNotes);
+  wire('toggle-guide', toggleGuide);
+  wire('print-guide', function () { window.print(); });
+
+  document.querySelectorAll('.slide').forEach(function (slide) {
+    slide.addEventListener('click', function (event) {
+      if (event.target.closest('a, button, .well, table, .worksheet, figure')) return;
+      var x = event.clientX / window.innerWidth;
+      show(x > 0.66 ? current + 1 : (x < 0.33 ? current - 1 : current));
+    });
+  });
+
+  show(current);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 240" role="img" aria-label="How htmlify works: gather evidence, author one self-contained HTML file, validate and open">
+  <defs>
+    <style>
+      .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+      .serif { font-family: Georgia, 'Times New Roman', serif; }
+      .body { font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+    </style>
+  </defs>
+  <rect width="960" height="240" fill="#FAF7F0"/>
+  <g stroke="#6E6759" stroke-width="1.5" opacity="0.6" fill="none">
+    <path d="M12 26 V12 H26"/>
+    <path d="M934 12 H948 V26"/>
+    <path d="M948 214 V228 H934"/>
+    <path d="M26 228 H12 V214"/>
+  </g>
+
+  <!-- step 1 -->
+  <rect x="56" y="56" width="248" height="128" fill="#FFFFFF" stroke="#1C1A15" stroke-width="2"/>
+  <text x="76" y="84" class="mono" font-size="10" letter-spacing="1.5" fill="#E84B0F">1.0 · GATHER</text>
+  <text x="76" y="112" class="serif" font-size="19" fill="#1C1A15">Evidence first</text>
+  <text x="76" y="136" class="body" font-size="12.5" fill="#6E6759">Repo, git state, PRs, CI, logs,</text>
+  <text x="76" y="154" class="body" font-size="12.5" fill="#6E6759">docs, screenshots — then design.</text>
+
+  <g stroke="#E84B0F" stroke-width="2.5" fill="none">
+    <path d="M312 120 H344"/>
+    <path d="M336 110 L348 120 L336 130"/>
+  </g>
+
+  <!-- step 2 -->
+  <rect x="356" y="56" width="248" height="128" fill="#FFFFFF" stroke="#1C1A15" stroke-width="2"/>
+  <text x="376" y="84" class="mono" font-size="10" letter-spacing="1.5" fill="#E84B0F">2.0 · AUTHOR</text>
+  <text x="376" y="112" class="serif" font-size="19" fill="#1C1A15">One HTML file</text>
+  <text x="376" y="136" class="body" font-size="12.5" fill="#6E6759">Inline CSS+JS, Hardcopy design,</text>
+  <text x="376" y="154" class="body" font-size="12.5" fill="#6E6759">document or deck. No build step.</text>
+
+  <g stroke="#E84B0F" stroke-width="2.5" fill="none">
+    <path d="M612 120 H644"/>
+    <path d="M636 110 L648 120 L636 130"/>
+  </g>
+
+  <!-- step 3 -->
+  <rect x="656" y="56" width="248" height="128" fill="#FFFFFF" stroke="#1C1A15" stroke-width="2"/>
+  <text x="676" y="84" class="mono" font-size="10" letter-spacing="1.5" fill="#E84B0F">3.0 · VALIDATE</text>
+  <text x="676" y="112" class="serif" font-size="19" fill="#1C1A15">Prove it, open it</text>
+  <text x="676" y="136" class="body" font-size="12.5" fill="#6E6759">htmlify-answer --validate, then</text>
+  <text x="676" y="154" class="body" font-size="12.5" fill="#6E6759">review, annotate, print to PDF.</text>
+</svg>

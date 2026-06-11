@@ -1,0 +1,20 @@
+{
+  "name": "htmlify",
+  "owner": {
+    "name": "Zak El Fassi",
+    "url": "https://github.com/zakelfassi"
+  },
+  "metadata": {
+    "description": "Self-contained HTML artifacts and presentation decks from agent context",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "htmlify",
+      "source": "./",
+      "description": "htmlify + deckify skills: agent answers become self-contained HTML documents and decks, validated by a bundled CLI. Optional Stop hook archives long answers automatically.",
+      "category": "productivity",
+      "keywords": ["html", "artifacts", "decks", "reports", "presentations"]
+    }
+  ]
+}

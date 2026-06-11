@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-label="htmlify — stdout, made permanent">
+  <defs>
+    <style>
+      .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+      .serif { font-family: Georgia, 'Times New Roman', serif; }
+      .body { font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+    </style>
+  </defs>
+  <rect width="1280" height="640" fill="#FAF7F0"/>
+  <!-- crop marks -->
+  <g stroke="#6E6759" stroke-width="2" opacity="0.6" fill="none">
+    <path d="M24 48 V24 H48"/>
+    <path d="M1232 24 H1256 V48"/>
+    <path d="M1256 592 V616 H1232"/>
+    <path d="M48 616 H24 V592"/>
+  </g>
+
+  <!-- name + tagline -->
+  <text x="96" y="208" class="serif" font-size="118" letter-spacing="-2" fill="#1C1A15">htmlify</text>
+  <rect x="100" y="238" width="240" height="6" fill="#E84B0F"/>
+  <text x="96" y="298" class="body" font-size="30" fill="#1C1A15">Agent answers become self-contained</text>
+  <text x="96" y="338" class="body" font-size="30" fill="#1C1A15">HTML documents and presentation decks.</text>
+  <text x="96" y="392" class="mono" font-size="17" letter-spacing="3" fill="#6E6759">STDOUT, MADE PERMANENT</text>
+
+  <!-- plate block bottom-left -->
+  <g>
+    <rect x="96" y="448" width="600" height="96" fill="#FFFFFF" stroke="#1C1A15" stroke-width="3"/>
+    <line x1="96" y1="496" x2="696" y2="496" stroke="#1C1A15" stroke-width="1.5"/>
+    <line x1="296" y1="448" x2="296" y2="544" stroke="#1C1A15" stroke-width="1.5"/>
+    <line x1="496" y1="448" x2="496" y2="544" stroke="#1C1A15" stroke-width="1.5"/>
+    <rect x="99" y="451" width="194" height="44" fill="#E84B0F"/>
+    <text x="196" y="479" class="mono" font-size="15" letter-spacing="2" fill="#FFFFFF" text-anchor="middle">SKILL FAMILY</text>
+    <text x="396" y="479" class="mono" font-size="15" letter-spacing="2" fill="#1C1A15" text-anchor="middle">htmlify</text>
+    <text x="596" y="479" class="mono" font-size="15" letter-spacing="2" fill="#1C1A15" text-anchor="middle">deckify</text>
+    <text x="196" y="526" class="mono" font-size="13" letter-spacing="1.5" fill="#6E6759" text-anchor="middle">0 DEPENDENCIES</text>
+    <text x="396" y="526" class="mono" font-size="13" letter-spacing="1.5" fill="#6E6759" text-anchor="middle">0 BUILD STEP</text>
+    <text x="596" y="526" class="mono" font-size="13" letter-spacing="1.5" fill="#6E6759" text-anchor="middle">1 FILE</text>
+  </g>
+
+  <!-- mini artifact mosaic right -->
+  <g>
+    <!-- document -->
+    <rect x="800" y="120" width="300" height="216" fill="#FFFFFF" stroke="#1C1A15" stroke-width="2.5"/>
+    <line x1="800" y1="164" x2="1100" y2="164" stroke="#1C1A15" stroke-width="1.5"/>
+    <rect x="803" y="123" width="64" height="38" fill="#E84B0F"/>
+    <rect x="824" y="184" width="160" height="10" fill="#1C1A15"/>
+    <rect x="824" y="206" width="252" height="6" fill="#D9D2C3"/>
+    <rect x="824" y="222" width="252" height="6" fill="#D9D2C3"/>
+    <rect x="824" y="238" width="180" height="6" fill="#D9D2C3"/>
+    <rect x="824" y="262" width="116" height="44" fill="none" stroke="#D9D2C3" stroke-width="1.5"/>
+    <rect x="952" y="262" width="116" height="44" fill="none" stroke="#D9D2C3" stroke-width="1.5"/>
+    <!-- deck -->
+    <rect x="864" y="380" width="300" height="180" fill="#FFFFFF" stroke="#1C1A15" stroke-width="2.5"/>
+    <rect x="888" y="408" width="200" height="14" fill="#1C1A15"/>
+    <rect x="888" y="436" width="140" height="8" fill="#D9D2C3"/>
+    <circle cx="920" cy="496" r="22" fill="none" stroke="#E84B0F" stroke-width="2.5"/>
+    <path d="M952 496 H1030" stroke="#1C1A15" stroke-width="2"/>
+    <path d="M1022 488 L1034 496 L1022 504" stroke="#1C1A15" stroke-width="2" fill="none"/>
+    <rect x="1056" y="474" width="44" height="44" fill="none" stroke="#1C1A15" stroke-width="2"/>
+    <line x1="864" y1="532" x2="1164" y2="532" stroke="#1C1A15" stroke-width="1.5"/>
+    <text x="888" y="550" class="mono" font-size="11" letter-spacing="1.5" fill="#6E6759">PLATE 04 / 18 · TALK-DECK</text>
+    <!-- carbon code well -->
+    <rect x="744" y="252" width="180" height="120" rx="2" fill="#211E18"/>
+    <text x="760" y="280" class="mono" font-size="12" fill="#A39A88">$ /htmlify</text>
+    <rect x="760" y="296" width="120" height="6" fill="#3A352B"/>
+    <rect x="760" y="312" width="140" height="6" fill="#3A352B"/>
+    <rect x="760" y="328" width="96" height="6" fill="#3A352B"/>
+    <text x="760" y="356" class="mono" font-size="12" fill="#FF6B2C">→ artifact.html</text>
+  </g>
+</svg>
