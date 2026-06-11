@@ -5,8 +5,10 @@ const htmlify = require('../index.js');
 
 const { renderMarkdownish, writeHtmlArtifact } = htmlify._internals;
 
+/** @returns {Promise<string>} */
 function readStdin() {
   return new Promise((resolve, reject) => {
+    /** @type {Buffer[]} */
     const chunks = [];
     process.stdin.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
     process.stdin.on('error', reject);
@@ -14,6 +16,10 @@ function readStdin() {
   });
 }
 
+/**
+ * @param {any} text
+ * @returns {string}
+ */
 function titleFrom(text) {
   const first = String(text || '')
     .split(/\r?\n/)

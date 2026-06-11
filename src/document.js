@@ -1,6 +1,12 @@
 const { escapeHtml } = require('./text');
 const { formatInline } = require('./markdown');
 
+/** @typedef {import('./extension/types').ArtifactMeta} ArtifactMeta */
+
+/**
+ * @param {any} text
+ * @returns {string}
+ */
 function deriveTitle(text) {
   const source = String(text || '').trim();
   if (!source) return 'HTML Export';
@@ -14,6 +20,10 @@ function deriveTitle(text) {
   return firstSentence.slice(0, 80);
 }
 
+/**
+ * @param {any} text
+ * @returns {string}
+ */
 function deriveExcerpt(text) {
   const lines = String(text || '').split(/\r?\n/);
   for (const line of lines) {
@@ -29,6 +39,10 @@ function deriveExcerpt(text) {
     .slice(0, 240);
 }
 
+/**
+ * @param {any} text
+ * @returns {string}
+ */
 function buildOutlineHtml(text) {
   const headings = [];
   const lines = String(text || '').split(/\r?\n/);
@@ -41,6 +55,12 @@ function buildOutlineHtml(text) {
   return `<div class="aside-panel"><div class="aside-label">Outline</div><ul class="outline-list">${headings.map((item) => `<li class="outline-item outline-level-${Math.min(item.level, 4)}">${formatInline(item.label)}</li>`).join('')}</ul></div>`;
 }
 
+/**
+ * @param {string} title
+ * @param {string} body
+ * @param {ArtifactMeta} meta
+ * @returns {string}
+ */
 function buildLocalHtmlDocument(title, body, meta) {
   const exportedAt = new Date(meta.exportedAt).toLocaleString();
   return `<!DOCTYPE html>

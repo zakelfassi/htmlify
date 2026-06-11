@@ -24,7 +24,26 @@ const { buildRichHtmlPrompt } = require('./prompts');
 
 const execFileAsync = promisify(execFile);
 
+/** @typedef {import('./types').PiHost} PiHost */
+/** @typedef {import('./types').ExtensionCtx} ExtensionCtx */
+/** @typedef {import('./types').SourceRecord} SourceRecord */
+/** @typedef {import('./types').ExportMeta} ExportMeta */
+
+/**
+ * @param {PiHost} pi
+ */
 module.exports = function htmlLongAnswerExtension(pi) {
+  /**
+   * @type {{
+   *   offerMode: string,
+   *   lastEligible: SourceRecord | null,
+   *   lastExport: ExportMeta | null,
+   *   pendingRichExport: { requestedAt: number, source: SourceRecord } | null,
+   *   lastPromptedSignature: string | null,
+   *   geminiAvailable: boolean | null,
+   *   config: { minChars: number, minLines: number, minParagraphs: number },
+   * }}
+   */
   const state = {
     offerMode: 'ask',
     lastEligible: null,
@@ -35,6 +54,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     config: { ...LONG_ANSWER_DEFAULTS },
   };
 
+  /** @param {any} entry */
   function rememberFromEntry(entry) {
     if (!entry || entry.type !== 'custom') return;
     if (entry.customType === PREF_ENTRY_TYPE && entry.data && typeof entry.data.offerMode === 'string') {
@@ -48,6 +68,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /** @param {any} branch */
   function hydrateLastEligibleFromBranch(branch) {
     if (!Array.isArray(branch) || state.lastEligible) return;
     for (let index = branch.length - 1; index >= 0; index -= 1) {
@@ -59,6 +80,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /** @param {ExtensionCtx | undefined} ctx */
   async function restoreSessionState(ctx) {
     try {
       const branch =
@@ -73,6 +95,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /**
+   * @param {string} type
+   * @param {object} data
+   */
   async function appendCustomEntry(type, data) {
     if (typeof pi.appendEntry !== 'function') return;
     try {
@@ -82,22 +108,30 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /** @param {string} mode */
   async function setOfferMode(mode) {
     state.offerMode = mode;
     await appendCustomEntry(PREF_ENTRY_TYPE, { offerMode: mode, savedAt: Date.now() });
   }
 
+  /** @param {SourceRecord} source */
   async function rememberEligibleSource(source) {
     state.lastEligible = source;
     const { text: _text, ...persistedSource } = source;
     await appendCustomEntry(SOURCE_ENTRY_TYPE, persistedSource);
   }
 
+  /** @param {ExportMeta} meta */
   async function rememberExport(meta) {
     state.lastExport = meta;
     await appendCustomEntry(EXPORT_ENTRY_TYPE, meta);
   }
 
+  /**
+   * @param {ExtensionCtx | undefined} ctx
+   * @param {string} message
+   * @param {string} [level]
+   */
   function notify(ctx, message, level) {
     if (!ctx || !ctx.ui || typeof ctx.ui.notify !== 'function') return;
     try {
@@ -110,6 +144,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /**
+   * @param {ExtensionCtx | undefined} ctx
+   * @param {any} error
+   */
   function notifyCommandError(ctx, error) {
     notify(
       ctx,
@@ -129,6 +167,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return state.geminiAvailable;
   }
 
+  /**
+   * @param {ExtensionCtx | undefined} ctx
+   * @param {string} filePath
+   * @param {string} mode
+   */
   async function maybeOpenArtifact(ctx, filePath, mode) {
     const opened = await openArtifact(filePath);
     if (!opened) return false;
@@ -140,6 +183,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return true;
   }
 
+  /**
+   * @param {string} text
+   * @returns {SourceRecord}
+   */
   function buildSourceRecord(text) {
     const title = deriveTitle(text);
     return {
@@ -156,6 +203,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
     };
   }
 
+  /**
+   * @param {ExtensionCtx | undefined} ctx
+   * @param {SourceRecord} source
+   * @param {string} [mode]
+   */
   async function exportLocalHtml(ctx, source, mode) {
     const bodyHtml = renderMarkdownish(source.text);
     const filePath = await writeHtmlArtifact({
@@ -181,6 +233,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return meta;
   }
 
+  /**
+   * @param {ExtensionCtx | undefined} ctx
+   * @param {SourceRecord} source
+   * @param {string} htmlText
+   */
   async function exportRichHtmlResult(ctx, source, htmlText) {
     const filePath = await writeRichHtmlArtifact({
       title: source.title,
@@ -200,6 +257,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return meta;
   }
 
+  /**
+   * @param {any} result
+   * @param {Array<{ label: string, value: string }>} options
+   * @returns {string | null}
+   */
   function normalizeChoice(result, options) {
     if (typeof result === 'string') return result;
     if (typeof result === 'number') {
@@ -212,6 +274,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return null;
   }
 
+  /**
+   * @param {any} ui
+   * @param {string} summary
+   */
   async function promptWithSelect(ui, summary) {
     const geminiAvailable = await isGeminiCliAvailable();
     const options = [
@@ -234,6 +300,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /**
+   * @param {ExtensionCtx | undefined} ctx
+   * @param {SourceRecord} source
+   */
   async function promptUserForExport(ctx, source) {
     if (!ctx || !ctx.ui || state.offerMode === 'never') return 'inline';
     const summary = [
@@ -250,13 +320,18 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return 'inline';
   }
 
+  /**
+   * @param {SourceRecord} source
+   * @param {ExtensionCtx | undefined} ctx
+   * @param {string} renderer
+   */
   async function queueRichExport(source, ctx, renderer) {
     if (renderer === 'gemini') {
       await notify(ctx, 'Generating designed HTML with Gemini CLI…', 'info');
       try {
         const html = await runGeminiRichExport(source);
         await exportRichHtmlResult(ctx, source, html);
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         await notify(
           ctx,
           `Gemini designed HTML failed: ${error && error.message ? error.message : String(error)}. Falling back to quick local HTML. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
@@ -283,6 +358,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     throw new Error('No runtime message API is available for richer HTML generation.');
   }
 
+  /**
+   * @param {SourceRecord} source
+   * @returns {Promise<string>}
+   */
   async function runGeminiRichExport(source) {
     const { stdout } = await execFileAsync(
       'gemini',
@@ -306,6 +385,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return html;
   }
 
+  /** @param {ExtensionCtx | undefined} ctx */
   async function chooseCommandExportMode(ctx) {
     if (!ctx || !ctx.ui || typeof ctx.ui.select !== 'function') {
       return 'local';
@@ -329,6 +409,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /**
+   * @param {string | null} choice
+   * @param {ExtensionCtx | undefined} ctx
+   * @param {SourceRecord} source
+   */
   async function handleChoice(choice, ctx, source) {
     if (choice === 'never') {
       await setOfferMode('never');
@@ -353,6 +438,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /**
+   * @param {any} event
+   * @param {ExtensionCtx | undefined} ctx
+   */
   async function maybeHandlePendingRichExport(event, ctx) {
     if (!state.pendingRichExport) return false;
     const info = extractMessageInfo(event);
@@ -362,7 +451,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     if (htmlDocument) {
       try {
         await exportRichHtmlResult(ctx, state.pendingRichExport.source, htmlDocument);
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         await notify(
           ctx,
           `Richer HTML pass was unsafe or invalid: ${error && error.message ? error.message : String(error)}. Wrote a fallback HTML export instead. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
@@ -385,6 +474,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return true;
   }
 
+  /**
+   * @param {any} event
+   * @param {ExtensionCtx | undefined} ctx
+   */
   async function handleAssistantMessage(event, ctx) {
     if (await maybeHandlePendingRichExport(event, ctx)) return;
 
@@ -404,6 +497,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     // The answer is already captured; /html-last remains available when the user wants the export.
   }
 
+  /**
+   * @param {any} args
+   * @param {ExtensionCtx | undefined} ctx
+   */
   async function exportLatestFromCommand(args, ctx) {
     if (!state.lastEligible || !state.lastEligible.text) {
       try {
@@ -444,6 +541,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     await exportLocalHtml(ctx, state.lastEligible, 'local');
   }
 
+  /** @param {any} args */
   async function readCommentBundle(args) {
     const raw = typeof args === 'string' ? args.trim() : parseArgs(args).join(' ').trim();
     if (!raw) throw new Error('Pass a comments JSON file path or pasted JSON after /html-comments.');
@@ -453,6 +551,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
     return JSON.parse(text);
   }
 
+  /**
+   * @param {any} args
+   * @param {ExtensionCtx | undefined} ctx
+   */
   async function importCommentsFromCommand(args, ctx) {
     if (!state.lastEligible || !state.lastEligible.text) {
       try {
@@ -498,6 +600,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
+  /** @type {(event: any, ctx: ExtensionCtx | undefined) => Promise<void>} */
   const restoreHandler = async (_event, ctx) => {
     await restoreSessionState(ctx);
   };
@@ -527,7 +630,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     pi.on('message_end', async (event, ctx) => {
       try {
         await handleAssistantMessage(event, ctx);
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         await notify(
           ctx,
           `${PRODUCT_NAME} extension error: ${error && error.message ? error.message : String(error)}`,
@@ -538,6 +641,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
   }
 
   if (typeof pi.registerCommand === 'function') {
+    /** @type {{ description: string, handler: (args: any, ctx: ExtensionCtx | undefined) => void }} */
     const exportCommand = {
       description:
         'Export the latest eligible assistant answer as HTML. Use `choose`, `gemini`, `pi`, or `local` to force a render path.',
@@ -554,6 +658,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     pi.registerCommand('htmlify', { ...exportCommand });
     pi.registerCommand('htmlify-last', { ...exportCommand });
 
+    /** @type {{ description: string, handler: (args: any, ctx: ExtensionCtx | undefined) => void }} */
     const commentsCommand = {
       description: 'Import downloaded HTML comments JSON and send the review prompt back to the agent.',
       handler: (args, ctx) => {
@@ -566,6 +671,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
     pi.registerCommand('html-comments', { ...commentsCommand });
     pi.registerCommand('htmlify-comments', { ...commentsCommand });
 
+    /** @type {{ description: string, handler: (args: any, ctx: ExtensionCtx | undefined) => void }} */
     const versionCommand = {
       description: 'Show the loaded htmlify extension version.',
       handler: (_args, ctx) => {

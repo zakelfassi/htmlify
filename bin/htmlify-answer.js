@@ -15,6 +15,10 @@ function usage() {
   ].join('\n');
 }
 
+/**
+ * @param {string[]} argv
+ * @returns {{ title: string, outDir: string, mode: string, input: string, help: boolean }}
+ */
 function parseArgs(argv) {
   const options = {
     title: '',
@@ -52,6 +56,10 @@ async function readStdin() {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+/**
+ * @param {{ input: string }} options
+ * @returns {Promise<string>}
+ */
 async function readInput(options) {
   if (options.input) {
     return fs.readFile(path.resolve(options.input), 'utf8');
@@ -77,11 +85,8 @@ async function main() {
 
   const title =
     options.title ||
-    sourceText
-      .split(/\r?\n/)
-      .find((line) => line.trim())
-      .trim()
-      .slice(0, 120) ||
+    // sourceText is non-empty here, so a non-blank line always exists.
+    /** @type {string} */ (sourceText.split(/\r?\n/).find((line) => line.trim())).trim().slice(0, 120) ||
     'htmlify export';
   const filePath = await writeHtmlArtifact({
     title,

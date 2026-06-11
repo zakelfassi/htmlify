@@ -1,3 +1,7 @@
+/**
+ * @param {{ title: string, text: string }} lastEligible
+ * @returns {string}
+ */
 function buildRichHtmlPrompt(lastEligible) {
   return [
     'Transform the following answer into a standalone, production-quality HTML artifact in the htmlify style.',

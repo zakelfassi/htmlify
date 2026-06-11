@@ -1,5 +1,12 @@
 const { COMMENT_BUNDLE_VERSION } = require('./constants');
 
+/** @typedef {import('./extension/types').CommentBundle} CommentBundle */
+
+/**
+ * @param {any} bundle
+ * @param {string | null | undefined} [expectedSourceId]
+ * @returns {CommentBundle}
+ */
 function validateCommentBundle(bundle, expectedSourceId) {
   if (!bundle || typeof bundle !== 'object') throw new Error('Comment bundle must be a JSON object.');
   if (bundle.version !== COMMENT_BUNDLE_VERSION)
@@ -13,7 +20,7 @@ function validateCommentBundle(bundle, expectedSourceId) {
     sourceId: String(bundle.sourceId || ''),
     title: String(bundle.title || 'HTML Export').slice(0, 160),
     exportUrl: String(bundle.exportUrl || ''),
-    comments: bundle.comments.map((comment, index) => {
+    comments: bundle.comments.map((/** @type {any} */ comment, /** @type {number} */ index) => {
       if (!comment || typeof comment !== 'object') throw new Error(`Comment ${index + 1} must be an object.`);
       const selectedText = String(comment.selectedText || '').trim();
       const body = String(comment.comment || '').trim();
@@ -31,6 +38,10 @@ function validateCommentBundle(bundle, expectedSourceId) {
   };
 }
 
+/**
+ * @param {CommentBundle} bundle
+ * @returns {string}
+ */
 function buildCommentsPrompt(bundle) {
   const lines = [
     'I reviewed the HTML export and left comments.',

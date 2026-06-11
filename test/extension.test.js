@@ -10,6 +10,10 @@ const packageJson = require('../package.json');
 const extension = require('../index.js');
 const internals = extension._internals;
 
+/**
+ * @param {string} body
+ * @param {string} [head]
+ */
 function richDocument(body, head = '<meta charset="utf-8" /><style>body{font-family:system-ui}</style>') {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -18,6 +22,9 @@ function richDocument(body, head = '<meta charset="utf-8" /><style>body{font-fam
 </html>`;
 }
 
+/**
+ * @param {(tempDir: string) => Promise<any>} fn
+ */
 async function withTempExportRoot(fn) {
   const previous = process.env.HTMLIFY_EXPORT_ROOT;
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'htmlify-test-'));
@@ -34,6 +41,13 @@ async function withTempExportRoot(fn) {
   }
 }
 
+/**
+ * @param {string} scriptPath
+ * @param {string[]} args
+ * @param {string} input
+ * @param {Record<string, string>} [env]
+ * @returns {Promise<{ code: number | null, stdout: string, stderr: string }>}
+ */
 function runNodeScript(scriptPath, args, input, env = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [scriptPath, ...(args || [])], {
@@ -105,10 +119,15 @@ test('extension registers commands/events and handles long assistant messages', 
     })
   );
 
+  /** @type {string[]} */
   const labels = [];
+  /** @type {Map<string, any>} */
   const events = new Map();
+  /** @type {Map<string, any>} */
   const commands = new Map();
+  /** @type {Array<{ type: string, data: any }>} */
   const entries = [];
+  /** @type {string[]} */
   const notifications = [];
   extension({
     setLabel: (label) => labels.push(label),
@@ -133,13 +152,13 @@ test('extension registers commands/events and handles long assistant messages', 
   const inputResult = await events.get('input')(
     { text: '/html-last' },
     {
-      ui: { notify: (message) => notifications.push(message) },
+      ui: { notify: (/** @type {string} */ message) => notifications.push(message) },
     }
   );
   assert.deepEqual(inputResult, { handled: true, action: 'handled' });
 
   const commandResult = commands.get('html-last').handler('', {
-    ui: { notify: (message) => notifications.push(message) },
+    ui: { notify: (/** @type {string} */ message) => notifications.push(message) },
   });
   assert.equal(commandResult, undefined);
   await Promise.resolve();
@@ -153,7 +172,7 @@ test('extension registers commands/events and handles long assistant messages', 
     { message: { role: 'assistant', text: longText } },
     {
       hasUI: true,
-      ui: { notify: (message) => notifications.push(message) },
+      ui: { notify: (/** @type {string} */ message) => notifications.push(message) },
     }
   );
 
@@ -174,9 +193,13 @@ test('/html-last choose falls back to local export when chooser is unavailable',
     process.env.HTMLIFY_SKIP_OPEN = '1';
 
     try {
+      /** @type {Map<string, any>} */
       const events = new Map();
+      /** @type {Array<{ type: string, data: any }>} */
       const entries = [];
+      /** @type {string[]} */
       const notifications = [];
+      /** @type {string[]} */
       const sentMessages = [];
       extension({
         on: (eventName, handler) => events.set(eventName, handler),
@@ -194,7 +217,7 @@ test('/html-last choose falls back to local export when chooser is unavailable',
             select: () => {
               throw new Error('chooser unavailable');
             },
-            notify: (message) => notifications.push(message),
+            notify: (/** @type {string} */ message) => notifications.push(message),
           },
         }
       );
@@ -405,8 +428,11 @@ test('comment bundles validate and produce deterministic agent prompt', () => {
 });
 
 test('/html-comments accepts pasted JSON without collapsing comment text', async () => {
+  /** @type {Map<string, any>} */
   const events = new Map();
+  /** @type {string[]} */
   const sentMessages = [];
+  /** @type {string[]} */
   const notifications = [];
   extension({
     on: (eventName, handler) => events.set(eventName, handler),
@@ -431,7 +457,7 @@ test('/html-comments accepts pasted JSON without collapsing comment text', async
   const result = await events.get('input')(
     { text: `/html-comments ${JSON.stringify(bundle, null, 2)}` },
     {
-      ui: { notify: (message) => notifications.push(message) },
+      ui: { notify: (/** @type {string} */ message) => notifications.push(message) },
     }
   );
 

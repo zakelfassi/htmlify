@@ -1,9 +1,17 @@
 const { escapeHtml } = require('./text');
 
+/**
+ * @param {any} line
+ * @returns {boolean}
+ */
 function isSeparatorRow(line) {
   return /^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/.test(line || '');
 }
 
+/**
+ * @param {any} line
+ * @returns {string[]}
+ */
 function splitTableRow(line) {
   return String(line || '')
     .trim()
@@ -13,6 +21,10 @@ function splitTableRow(line) {
     .map((cell) => cell.trim());
 }
 
+/**
+ * @param {any} raw
+ * @returns {string}
+ */
 function formatInline(raw) {
   let text = escapeHtml(raw);
   text = text.replace(
@@ -29,6 +41,12 @@ function formatInline(raw) {
   return text;
 }
 
+/**
+ * @param {string[]} lines
+ * @param {number} start
+ * @param {(line: string, index: number) => boolean} predicate
+ * @returns {{ collected: string[], nextIndex: number }}
+ */
 function collectUntil(lines, start, predicate) {
   const collected = [];
   let index = start;
@@ -39,6 +57,10 @@ function collectUntil(lines, start, predicate) {
   return { collected, nextIndex: index };
 }
 
+/**
+ * @param {any} text
+ * @returns {string}
+ */
 function renderMarkdownish(text) {
   const lines = String(text || '')
     .replace(/\r/g, '')

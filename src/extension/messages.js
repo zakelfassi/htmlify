@@ -1,5 +1,9 @@
 const { sha, countLines, countParagraphs } = require('../text');
 
+/**
+ * @param {any} part
+ * @returns {string}
+ */
 function extractTextPart(part) {
   if (!part) return '';
   if (typeof part === 'string') return part;
@@ -10,6 +14,10 @@ function extractTextPart(part) {
   return '';
 }
 
+/**
+ * @param {any} candidate
+ * @returns {string | null}
+ */
 function normalizeRole(candidate) {
   if (!candidate) return null;
   const role = String(candidate).toLowerCase();
@@ -18,6 +26,12 @@ function normalizeRole(candidate) {
   return role;
 }
 
+/**
+ * Events from the host stay loose; runtime guards handle the shape.
+ *
+ * @param {any} event
+ * @returns {{ id: string, role: string, text: string } | null}
+ */
 function extractMessageInfo(event) {
   const candidate =
     event && typeof event === 'object' ? event.message || event.entry || event.payload || event.data || event : null;
@@ -41,6 +55,11 @@ function extractMessageInfo(event) {
   };
 }
 
+/**
+ * @param {any} text
+ * @param {{ minChars: number, minLines: number, minParagraphs: number }} config
+ * @returns {boolean}
+ */
 function isLongAnswer(text, config) {
   const source = String(text || '').trim();
   if (!source) return false;
@@ -51,6 +70,10 @@ function isLongAnswer(text, config) {
   );
 }
 
+/**
+ * @param {any} text
+ * @returns {string | null}
+ */
 function extractHtmlDocument(text) {
   const source = String(text || '').trim();
   if (!source) return null;

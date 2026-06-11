@@ -1,5 +1,9 @@
 const crypto = require('crypto');
 
+/**
+ * @param {any} input
+ * @returns {string}
+ */
 function sha(input) {
   return crypto
     .createHash('sha1')
@@ -7,6 +11,10 @@ function sha(input) {
     .digest('hex');
 }
 
+/**
+ * @param {any} value
+ * @returns {string}
+ */
 function escapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -16,6 +24,10 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * @param {any} value
+ * @returns {string}
+ */
 function slugify(value) {
   const normalized = String(value || 'export')
     .toLowerCase()
@@ -25,6 +37,10 @@ function slugify(value) {
   return normalized || 'export';
 }
 
+/**
+ * @param {any} text
+ * @returns {number}
+ */
 function countParagraphs(text) {
   return String(text || '')
     .split(/\n\s*\n/g)
@@ -32,12 +48,20 @@ function countParagraphs(text) {
     .filter(Boolean).length;
 }
 
+/**
+ * @param {any} text
+ * @returns {number}
+ */
 function countLines(text) {
   return String(text || '')
     .split(/\r?\n/)
     .filter((line) => line.trim().length > 0).length;
 }
 
+/**
+ * @param {any} text
+ * @returns {number}
+ */
 function wordCount(text) {
   const matches = String(text || '')
     .trim()

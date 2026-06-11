@@ -1,12 +1,20 @@
+/**
+ * @param {any} rawArgs
+ * @returns {string[]}
+ */
 function parseArgs(rawArgs) {
   if (Array.isArray(rawArgs)) return rawArgs.map((item) => String(item));
   if (typeof rawArgs === 'string') return rawArgs.trim().split(/\s+/).filter(Boolean);
   if (rawArgs && typeof rawArgs === 'object' && Array.isArray(rawArgs.args)) {
-    return rawArgs.args.map((item) => String(item));
+    return rawArgs.args.map((/** @type {any} */ item) => String(item));
   }
   return [];
 }
 
+/**
+ * @param {any} text
+ * @returns {{ command: string, args: string } | null}
+ */
 function parseHtmlCommandInput(text) {
   const source = typeof text === 'string' ? text.trim() : '';
   if (/^\/(?:html-last-version|htmlify-version)\s*$/i.test(source)) {
@@ -22,6 +30,10 @@ function parseHtmlCommandInput(text) {
   return null;
 }
 
+/**
+ * @param {any} rawArgs
+ * @returns {string | null}
+ */
 function resolveForcedExportMode(rawArgs) {
   const parsedArgs = parseArgs(rawArgs);
   if (parsedArgs.some((arg) => /^(choose|choices|chooser|menu)$/i.test(arg))) return 'choose';
@@ -32,6 +44,10 @@ function resolveForcedExportMode(rawArgs) {
   return null;
 }
 
+/**
+ * @param {any} ctx
+ * @returns {boolean}
+ */
 function hasSelectableUi(ctx) {
   return Boolean(ctx && ctx.ui && typeof ctx.ui.select === 'function');
 }

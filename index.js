@@ -10,26 +10,26 @@ const { parseArgs, parseHtmlCommandInput, resolveForcedExportMode, hasSelectable
 const { resolveOpenCommand } = require('./src/extension/open');
 const { buildRichHtmlPrompt } = require('./src/extension/prompts');
 
-module.exports = createExtension;
-
-module.exports._internals = {
-  buildLocalHtmlDocument,
-  buildRichHtmlPrompt,
-  extractHtmlDocument,
-  formatInline,
-  getExportRoot,
-  parseArgs,
-  parseHtmlLastInput: parseHtmlCommandInput,
-  resolveOpenCommand,
-  hasSelectableUi,
-  renderMarkdownish,
-  resolveForcedExportMode,
-  validateRichHtmlDocument,
-  addCommentableAttributes,
-  buildAnnotationLayer,
-  buildCommentsPrompt,
-  injectAnnotationLayer,
-  validateCommentBundle,
-  writeHtmlArtifact,
-  writeRichHtmlArtifact,
-};
+module.exports = Object.assign(createExtension, {
+  _internals: {
+    buildLocalHtmlDocument,
+    buildRichHtmlPrompt,
+    extractHtmlDocument,
+    formatInline,
+    getExportRoot,
+    parseArgs,
+    parseHtmlLastInput: parseHtmlCommandInput,
+    resolveOpenCommand,
+    hasSelectableUi,
+    renderMarkdownish,
+    resolveForcedExportMode,
+    validateRichHtmlDocument,
+    addCommentableAttributes,
+    buildAnnotationLayer,
+    buildCommentsPrompt,
+    injectAnnotationLayer,
+    validateCommentBundle,
+    writeHtmlArtifact,
+    writeRichHtmlArtifact,
+  },
+});

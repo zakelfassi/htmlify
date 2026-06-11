@@ -7,6 +7,9 @@ const { deriveExcerpt, buildOutlineHtml, buildLocalHtmlDocument } = require('./d
 const { addCommentableAttributes, injectAnnotationLayer } = require('./annotation');
 const { validateRichHtmlDocument } = require('./validate');
 
+/**
+ * @param {string} dir
+ */
 async function ensureDir(dir) {
   await fs.mkdir(dir, { recursive: true });
 }
@@ -15,6 +18,10 @@ function getExportRoot() {
   return process.env.HTMLIFY_EXPORT_ROOT || process.env.PI_HTML_LONG_ANSWER_EXPORT_ROOT || DEFAULT_EXPORT_ROOT;
 }
 
+/**
+ * @param {{ title: string, bodyHtml: string, sourceText: string, mode: string }} input
+ * @returns {Promise<string>}
+ */
 async function writeHtmlArtifact({ title, bodyHtml, sourceText, mode }) {
   const exportRoot = getExportRoot();
   await ensureDir(exportRoot);
@@ -37,6 +44,10 @@ async function writeHtmlArtifact({ title, bodyHtml, sourceText, mode }) {
   return filePath;
 }
 
+/**
+ * @param {{ title: string, htmlText: string, sourceId?: string }} input
+ * @returns {Promise<string>}
+ */
 async function writeRichHtmlArtifact({ title, htmlText, sourceId }) {
   const html = validateRichHtmlDocument(htmlText);
   const exportRoot = getExportRoot();

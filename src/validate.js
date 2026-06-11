@@ -9,6 +9,10 @@ const {
   EXTERNAL_CSS_URL,
 } = require('./constants');
 
+/**
+ * @param {any} htmlText
+ * @returns {string}
+ */
 function validateRichHtmlDocument(htmlText) {
   const html = String(htmlText || '').trim();
   if (!html) {

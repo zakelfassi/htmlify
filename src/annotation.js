@@ -1,5 +1,9 @@
 const { COMMENT_BUNDLE_VERSION, TRUSTED_ANNOTATION_MARKER } = require('./constants');
 
+/**
+ * @param {any} html
+ * @returns {string}
+ */
 function addCommentableAttributes(html) {
   let index = 0;
   return String(html || '').replace(
@@ -11,6 +15,10 @@ function addCommentableAttributes(html) {
   );
 }
 
+/**
+ * @param {{ sourceId?: string, title?: string }} [meta]
+ * @returns {string}
+ */
 function buildAnnotationLayer(meta) {
   const sourceId = String(meta && meta.sourceId ? meta.sourceId : '');
   const title = String(meta && meta.title ? meta.title : 'HTML Export');
@@ -140,6 +148,11 @@ function buildAnnotationLayer(meta) {
 </script>`;
 }
 
+/**
+ * @param {any} html
+ * @param {{ sourceId?: string, title?: string }} [meta]
+ * @returns {string}
+ */
 function injectAnnotationLayer(html, meta) {
   const layer = buildAnnotationLayer(meta);
   const source = String(html || '');
