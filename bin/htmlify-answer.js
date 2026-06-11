@@ -4,10 +4,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const htmlify = require('../index.js');
 
-const {
-  renderMarkdownish,
-  writeHtmlArtifact,
-} = htmlify._internals;
+const { renderMarkdownish, writeHtmlArtifact } = htmlify._internals;
 
 function usage() {
   return [
@@ -78,7 +75,14 @@ async function main() {
     throw new Error('No input text provided.');
   }
 
-  const title = options.title || sourceText.split(/\r?\n/).find((line) => line.trim()).trim().slice(0, 120) || 'htmlify export';
+  const title =
+    options.title ||
+    sourceText
+      .split(/\r?\n/)
+      .find((line) => line.trim())
+      .trim()
+      .slice(0, 120) ||
+    'htmlify export';
   const filePath = await writeHtmlArtifact({
     title,
     bodyHtml: renderMarkdownish(sourceText),

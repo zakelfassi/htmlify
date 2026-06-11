@@ -23,18 +23,23 @@ const LONG_ANSWER_DEFAULTS = {
 };
 const MAX_RICH_HTML_CHARS = 512 * 1024;
 const MAX_RICH_HTML_TAGS = 2500;
-const BLOCKED_RICH_TAGS = /<\s*\/?\s*(?:script|iframe|object|embed|link|base|form|input|button|textarea|select|option)\b/i;
+const BLOCKED_RICH_TAGS =
+  /<\s*\/?\s*(?:script|iframe|object|embed|link|base|form|input|button|textarea|select|option)\b/i;
 const BLOCKED_META_REFRESH = /<\s*meta\b[^>]*http-equiv\s*=\s*(['"]?)refresh\1/i;
 const EVENT_HANDLER_ATTR = /\s+on[a-z]+\s*=/i;
-const JAVASCRIPT_URL_ATTR = /\s(?:href|src|xlink:href|action|formaction)\s*=\s*(['\"]?)\s*javascript:/i;
-const EXTERNAL_ASSET_ATTR = /(?:\s(?:src|poster)\s*=\s*(['\"]?)\s*(?:https?:)?\/\/|\ssrcset\s*=\s*(['\"]?)[^'\">]*(?:https?:)?\/\/|<\s*(?:image|use|feimage)\b[^>]*\s(?:href|xlink:href)\s*=\s*(['\"]?)\s*(?:https?:)?\/\/)/i;
-const EXTERNAL_CSS_URL = /(?:url\(\s*(['\"]?)\s*(?:https?:)?\/\/|@import\s+(?:url\(\s*)?(['\"]?)\s*(?:https?:)?\/\/)/i;
+const JAVASCRIPT_URL_ATTR = /\s(?:href|src|xlink:href|action|formaction)\s*=\s*(['"]?)\s*javascript:/i;
+const EXTERNAL_ASSET_ATTR =
+  /(?:\s(?:src|poster)\s*=\s*(['"]?)\s*(?:https?:)?\/\/|\ssrcset\s*=\s*(['"]?)[^'">]*(?:https?:)?\/\/|<\s*(?:image|use|feimage)\b[^>]*\s(?:href|xlink:href)\s*=\s*(['"]?)\s*(?:https?:)?\/\/)/i;
+const EXTERNAL_CSS_URL = /(?:url\(\s*(['"]?)\s*(?:https?:)?\/\/|@import\s+(?:url\(\s*)?(['"]?)\s*(?:https?:)?\/\/)/i;
 const OPEN_FAILURE_WINDOW_MS = 1000;
 
 const TRUSTED_ANNOTATION_MARKER = '<!-- htmlify trusted annotation layer -->';
 
 function sha(input) {
-  return crypto.createHash('sha1').update(String(input || '')).digest('hex');
+  return crypto
+    .createHash('sha1')
+    .update(String(input || ''))
+    .digest('hex');
 }
 
 function escapeHtml(value) {
@@ -59,19 +64,19 @@ function countParagraphs(text) {
   return String(text || '')
     .split(/\n\s*\n/g)
     .map((chunk) => chunk.trim())
-    .filter(Boolean)
-    .length;
+    .filter(Boolean).length;
 }
 
 function countLines(text) {
   return String(text || '')
     .split(/\r?\n/)
-    .filter((line) => line.trim().length > 0)
-    .length;
+    .filter((line) => line.trim().length > 0).length;
 }
 
 function wordCount(text) {
-  const matches = String(text || '').trim().match(/\S+/g);
+  const matches = String(text || '')
+    .trim()
+    .match(/\S+/g);
   return matches ? matches.length : 0;
 }
 
@@ -90,8 +95,14 @@ function splitTableRow(line) {
 
 function formatInline(raw) {
   let text = escapeHtml(raw);
-  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>');
-  text = text.replace(/(?<!href=")(?<!">)(https?:\/\/[^\s<)]+)/g, '<a href="$1" target="_blank" rel="noreferrer noopener">$1</a>');
+  text = text.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>'
+  );
+  text = text.replace(
+    /(?<!href=")(?<!">)(https?:\/\/[^\s<)]+)/g,
+    '<a href="$1" target="_blank" rel="noreferrer noopener">$1</a>'
+  );
   text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
   text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   text = text.replace(/(^|\W)\*([^*]+)\*(?=\W|$)/g, '$1<em>$2</em>');
@@ -109,7 +120,9 @@ function collectUntil(lines, start, predicate) {
 }
 
 function renderMarkdownish(text) {
-  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const lines = String(text || '')
+    .replace(/\r/g, '')
+    .split('\n');
   const blocks = [];
   let i = 0;
 
@@ -131,7 +144,9 @@ function renderMarkdownish(text) {
         i += 1;
       }
       if (i < lines.length) i += 1;
-      blocks.push(`<pre class="code-block"><div class="code-meta">${escapeHtml(language || 'code')}</div><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+      blocks.push(
+        `<pre class="code-block"><div class="code-meta">${escapeHtml(language || 'code')}</div><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`
+      );
       continue;
     }
 
@@ -145,10 +160,10 @@ function renderMarkdownish(text) {
 
     if (/^>\s?/.test(trimmed)) {
       const { collected, nextIndex } = collectUntil(lines, i, (current) => /^>\s?/.test((current || '').trim()));
-      const inner = collected
-        .map((current) => current.trim().replace(/^>\s?/, ''))
-        .join(' ');
-      blocks.push(`<aside class="callout"><div class="callout-label">Callout</div><p>${formatInline(inner)}</p></aside>`);
+      const inner = collected.map((current) => current.trim().replace(/^>\s?/, '')).join(' ');
+      blocks.push(
+        `<aside class="callout"><div class="callout-label">Callout</div><p>${formatInline(inner)}</p></aside>`
+      );
       i = nextIndex;
       continue;
     }
@@ -173,7 +188,9 @@ function renderMarkdownish(text) {
       const pattern = ordered ? /^\d+\.\s+/ : /^(?:[-*])\s+/;
       const { collected, nextIndex } = collectUntil(lines, i, (current) => pattern.test((current || '').trim()));
       const tag = ordered ? 'ol' : 'ul';
-      blocks.push(`<${tag}>${collected.map((current) => `<li>${formatInline(current.trim().replace(pattern, ''))}</li>`).join('')}</${tag}>`);
+      blocks.push(
+        `<${tag}>${collected.map((current) => `<li>${formatInline(current.trim().replace(pattern, ''))}</li>`).join('')}</${tag}>`
+      );
       i = nextIndex;
       continue;
     }
@@ -188,9 +205,7 @@ function renderMarkdownish(text) {
       return true;
     });
 
-    const paragraph = collected
-      .map((current) => current.trim())
-      .join(' ');
+    const paragraph = collected.map((current) => current.trim()).join(' ');
     blocks.push(`<p>${formatInline(paragraph)}</p>`);
     i = nextIndex;
   }
@@ -217,19 +232,19 @@ function normalizeRole(candidate) {
 }
 
 function extractMessageInfo(event) {
-  const candidate = event && typeof event === 'object'
-    ? (event.message || event.entry || event.payload || event.data || event)
-    : null;
+  const candidate =
+    event && typeof event === 'object' ? event.message || event.entry || event.payload || event.data || event : null;
   if (!candidate || typeof candidate !== 'object') return null;
 
   const role = normalizeRole(candidate.role || candidate.author || candidate.kind || candidate.source);
   const id = candidate.id || candidate.messageId || candidate.entryId || null;
-  const text = [
-    typeof candidate.text === 'string' ? candidate.text : '',
-    typeof candidate.content === 'string' ? candidate.content : '',
-    Array.isArray(candidate.content) ? candidate.content.map(extractTextPart).join('') : '',
-    Array.isArray(candidate.parts) ? candidate.parts.map(extractTextPart).join('') : '',
-  ].find((value) => typeof value === 'string' && value.trim().length > 0) || '';
+  const text =
+    [
+      typeof candidate.text === 'string' ? candidate.text : '',
+      typeof candidate.content === 'string' ? candidate.content : '',
+      Array.isArray(candidate.content) ? candidate.content.map(extractTextPart).join('') : '',
+      Array.isArray(candidate.parts) ? candidate.parts.map(extractTextPart).join('') : '',
+    ].find((value) => typeof value === 'string' && value.trim().length > 0) || '';
 
   if (!text.trim() || role !== 'assistant') return null;
   return {
@@ -243,7 +258,11 @@ function deriveTitle(text) {
   const source = String(text || '').trim();
   if (!source) return 'HTML Export';
   const firstHeading = source.split('\n').find((line) => /^#{1,6}\s+/.test(line.trim()));
-  if (firstHeading) return firstHeading.replace(/^#{1,6}\s+/, '').trim().slice(0, 80);
+  if (firstHeading)
+    return firstHeading
+      .replace(/^#{1,6}\s+/, '')
+      .trim()
+      .slice(0, 80);
   const firstSentence = source.replace(/\s+/g, ' ').split(/(?<=[.!?])\s+/)[0] || source;
   return firstSentence.slice(0, 80);
 }
@@ -257,7 +276,10 @@ function deriveExcerpt(text) {
     if (/^(?:[-*]|\d+\.)\s+/.test(trimmed)) continue;
     return trimmed.slice(0, 240);
   }
-  return String(text || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+  return String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 240);
 }
 
 function buildOutlineHtml(text) {
@@ -537,10 +559,13 @@ function validateRichHtmlDocument(htmlText) {
 
 function addCommentableAttributes(html) {
   let index = 0;
-  return String(html || '').replace(/<(p|h[1-6]|li|pre|table|aside|blockquote)\b(?![^>]*\bdata-commentable=)([^>]*)>/gi, (match, tag, attrs) => {
-    index += 1;
-    return `<${tag}${attrs} data-commentable="true" data-block-id="b-${index}">`;
-  });
+  return String(html || '').replace(
+    /<(p|h[1-6]|li|pre|table|aside|blockquote)\b(?![^>]*\bdata-commentable=)([^>]*)>/gi,
+    (match, tag, attrs) => {
+      index += 1;
+      return `<${tag}${attrs} data-commentable="true" data-block-id="b-${index}">`;
+    }
+  );
 }
 
 function buildAnnotationLayer(meta) {
@@ -682,7 +707,8 @@ function injectAnnotationLayer(html, meta) {
 
 function validateCommentBundle(bundle, expectedSourceId) {
   if (!bundle || typeof bundle !== 'object') throw new Error('Comment bundle must be a JSON object.');
-  if (bundle.version !== COMMENT_BUNDLE_VERSION) throw new Error(`Comment bundle version must be ${COMMENT_BUNDLE_VERSION}.`);
+  if (bundle.version !== COMMENT_BUNDLE_VERSION)
+    throw new Error(`Comment bundle version must be ${COMMENT_BUNDLE_VERSION}.`);
   if (!Array.isArray(bundle.comments)) throw new Error('Comment bundle must include a comments array.');
   if (expectedSourceId && bundle.sourceId && bundle.sourceId !== expectedSourceId) {
     throw new Error('Comment bundle source does not match the last captured answer.');
@@ -782,7 +808,9 @@ async function resolveOpenCommand(command) {
     }
   }
 
-  const searchPath = String(process.env.PATH || '').split(path.delimiter).filter(Boolean);
+  const searchPath = String(process.env.PATH || '')
+    .split(path.delimiter)
+    .filter(Boolean);
   for (const directory of searchPath) {
     const candidate = path.join(directory, command);
     try {
@@ -885,9 +913,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
 
   async function restoreSessionState(ctx) {
     try {
-      const branch = ctx && ctx.sessionManager && typeof ctx.sessionManager.getBranch === 'function'
-        ? ctx.sessionManager.getBranch()
-        : [];
+      const branch =
+        ctx && ctx.sessionManager && typeof ctx.sessionManager.getBranch === 'function'
+          ? ctx.sessionManager.getBranch()
+          : [];
       if (!Array.isArray(branch)) return;
       for (const entry of branch) rememberFromEntry(entry);
       hydrateLastEligibleFromBranch(branch);
@@ -934,7 +963,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
   }
 
   function notifyCommandError(ctx, error) {
-    notify(ctx, `${PRODUCT_NAME} command error: ${error && error.message ? error.message : String(error)} [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'error');
+    notify(
+      ctx,
+      `${PRODUCT_NAME} command error: ${error && error.message ? error.message : String(error)} [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
+      'error'
+    );
   }
 
   async function isGeminiCliAvailable() {
@@ -950,11 +983,7 @@ module.exports = function htmlLongAnswerExtension(pi) {
 
   async function openArtifact(filePath) {
     if (process.env.HTMLIFY_SKIP_OPEN === '1' || process.env.PI_HTML_LONG_ANSWER_SKIP_OPEN === '1') return false;
-    const command = process.platform === 'darwin'
-      ? '/usr/bin/open'
-      : process.platform === 'linux'
-        ? 'xdg-open'
-        : null;
+    const command = process.platform === 'darwin' ? '/usr/bin/open' : process.platform === 'linux' ? 'xdg-open' : null;
     const executable = await resolveOpenCommand(command);
     if (!executable) return false;
 
@@ -990,7 +1019,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
   async function maybeOpenArtifact(ctx, filePath, mode) {
     const opened = await openArtifact(filePath);
     if (!opened) return false;
-    notify(ctx, `${mode === 'local' ? 'Opened local HTML export' : 'Opened designed HTML export'} in your default browser. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
+    notify(
+      ctx,
+      `${mode === 'local' ? 'Opened local HTML export' : 'Opened designed HTML export'} in your default browser. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
+      'info'
+    );
     return true;
   }
 
@@ -1026,7 +1059,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
       exportedAt: Date.now(),
     };
     await rememberExport(meta);
-    await notify(ctx, `HTML export written to ${filePath}. Use /html-last rich or /htmlify rich for a more designed HTML pass. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
+    await notify(
+      ctx,
+      `HTML export written to ${filePath}. Use /html-last rich or /htmlify rich for a more designed HTML pass. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
+      'info'
+    );
     await maybeOpenArtifact(ctx, filePath, 'local');
     return meta;
   }
@@ -1107,7 +1144,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
         const html = await runGeminiRichExport(source);
         await exportRichHtmlResult(ctx, source, html);
       } catch (error) {
-        await notify(ctx, `Gemini designed HTML failed: ${error && error.message ? error.message : String(error)}. Falling back to quick local HTML. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'warning');
+        await notify(
+          ctx,
+          `Gemini designed HTML failed: ${error && error.message ? error.message : String(error)}. Falling back to quick local HTML. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
+          'warning'
+        );
         await exportLocalHtml(ctx, source, 'local');
       }
       return;
@@ -1130,13 +1171,14 @@ module.exports = function htmlLongAnswerExtension(pi) {
   }
 
   async function runGeminiRichExport(source) {
-    const { stdout } = await execFileAsync('gemini', [
-      '--prompt', buildRichHtmlPrompt(source),
-      '--output-format', 'text',
-    ], {
-      timeout: 120000,
-      maxBuffer: 8 * 1024 * 1024,
-    });
+    const { stdout } = await execFileAsync(
+      'gemini',
+      ['--prompt', buildRichHtmlPrompt(source), '--output-format', 'text'],
+      {
+        timeout: 120000,
+        maxBuffer: 8 * 1024 * 1024,
+      }
+    );
 
     const output = String(stdout || '').trim();
     if (!output) {
@@ -1174,7 +1216,6 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
   }
 
-
   async function handleChoice(choice, ctx, source) {
     if (choice === 'never') {
       await setOfferMode('never');
@@ -1209,14 +1250,22 @@ module.exports = function htmlLongAnswerExtension(pi) {
       try {
         await exportRichHtmlResult(ctx, state.pendingRichExport.source, htmlDocument);
       } catch (error) {
-        await notify(ctx, `Richer HTML pass was unsafe or invalid: ${error && error.message ? error.message : String(error)}. Wrote a fallback HTML export instead. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'warning');
+        await notify(
+          ctx,
+          `Richer HTML pass was unsafe or invalid: ${error && error.message ? error.message : String(error)}. Wrote a fallback HTML export instead. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
+          'warning'
+        );
         await exportLocalHtml(ctx, state.pendingRichExport.source, 'llm-enhanced-fallback');
       }
     } else {
-      await exportLocalHtml(ctx, {
-        ...state.pendingRichExport.source,
-        text: info.text,
-      }, 'llm-enhanced-fallback');
+      await exportLocalHtml(
+        ctx,
+        {
+          ...state.pendingRichExport.source,
+          text: info.text,
+        },
+        'llm-enhanced-fallback'
+      );
       await notify(ctx, 'Richer HTML pass returned plain text; wrote a fallback HTML export instead.', 'warning');
     }
     state.pendingRichExport = null;
@@ -1245,9 +1294,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
   async function exportLatestFromCommand(args, ctx) {
     if (!state.lastEligible || !state.lastEligible.text) {
       try {
-        const branch = ctx && ctx.sessionManager && typeof ctx.sessionManager.getBranch === 'function'
-          ? ctx.sessionManager.getBranch()
-          : [];
+        const branch =
+          ctx && ctx.sessionManager && typeof ctx.sessionManager.getBranch === 'function'
+            ? ctx.sessionManager.getBranch()
+            : [];
         hydrateLastEligibleFromBranch(branch);
       } catch (_) {
         // Ignore branch hydration failures here; warning below handles the miss.
@@ -1255,7 +1305,11 @@ module.exports = function htmlLongAnswerExtension(pi) {
     }
 
     if (!state.lastEligible || !state.lastEligible.text) {
-      notify(ctx, `No eligible assistant answer has been captured yet in this session. Ask for a long answer first, then run /html-last or /htmlify. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'warning');
+      notify(
+        ctx,
+        `No eligible assistant answer has been captured yet in this session. Ask for a long answer first, then run /html-last or /htmlify. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
+        'warning'
+      );
       return;
     }
 
@@ -1289,9 +1343,10 @@ module.exports = function htmlLongAnswerExtension(pi) {
   async function importCommentsFromCommand(args, ctx) {
     if (!state.lastEligible || !state.lastEligible.text) {
       try {
-        const branch = ctx && ctx.sessionManager && typeof ctx.sessionManager.getBranch === 'function'
-          ? ctx.sessionManager.getBranch()
-          : [];
+        const branch =
+          ctx && ctx.sessionManager && typeof ctx.sessionManager.getBranch === 'function'
+            ? ctx.sessionManager.getBranch()
+            : [];
         hydrateLastEligibleFromBranch(branch);
       } catch (_) {
         // Warning below handles the miss.
@@ -1303,12 +1358,20 @@ module.exports = function htmlLongAnswerExtension(pi) {
     await appendCustomEntry(COMMENT_ENTRY_TYPE, { ...bundle, importedAt: Date.now() });
     if (typeof pi.sendUserMessage === 'function') {
       await pi.sendUserMessage(prompt, { deliverAs: 'followUp' });
-      notify(ctx, `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
+      notify(
+        ctx,
+        `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
+        'info'
+      );
       return;
     }
     if (typeof pi.sendMessage === 'function') {
       await pi.sendMessage(prompt, { deliverAs: 'followUp', triggerTurn: true });
-      notify(ctx, `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`, 'info');
+      notify(
+        ctx,
+        `Queued ${bundle.comments.length} HTML comment${bundle.comments.length === 1 ? '' : 's'} for the agent. [${PRODUCT_NAME} ${EXTENSION_VERSION}]`,
+        'info'
+      );
       return;
     }
     notify(ctx, prompt, 'info');
@@ -1352,14 +1415,19 @@ module.exports = function htmlLongAnswerExtension(pi) {
       try {
         await handleAssistantMessage(event, ctx);
       } catch (error) {
-        await notify(ctx, `${PRODUCT_NAME} extension error: ${error && error.message ? error.message : String(error)}`, 'error');
+        await notify(
+          ctx,
+          `${PRODUCT_NAME} extension error: ${error && error.message ? error.message : String(error)}`,
+          'error'
+        );
       }
     });
   }
 
   if (typeof pi.registerCommand === 'function') {
     const exportCommand = {
-      description: 'Export the latest eligible assistant answer as HTML. Use `choose`, `gemini`, `pi`, or `local` to force a render path.',
+      description:
+        'Export the latest eligible assistant answer as HTML. Use `choose`, `gemini`, `pi`, or `local` to force a render path.',
       handler: (args, ctx) => {
         void exportLatestFromCommand(args, ctx).catch((error) => {
           notifyCommandError(ctx, error);

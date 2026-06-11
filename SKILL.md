@@ -32,7 +32,8 @@ Use HTML when the answer needs shape, scanning, comparison, annotation, print/PD
 7. Include print CSS for artifacts intended to share, archive, or export as PDF.
 8. Add keyboard navigation for deck-style artifacts.
 9. Make mobile acceptable, but optimize dense operational artifacts for desktop review.
-10. Validate before final response: doctype, standalone `<html>`/`<body>`, no missing local assets, expected sections, and no obvious layout overlap.
+10. When an image, screenshot, figure, or thumbnail references a link, article, documentation page, post, paper, dashboard, or source page, attach the source in the visible caption/ref near the image. Prefer a caption anchor such as `Source: <a href="...">Exact source title</a>` or weave the linked title into the caption. Do not leave source URLs only in hidden metadata.
+11. Validate before final response: doctype, standalone `<html>`/`<body>`, no missing local assets, expected sections, source-linked captions for referenced images, and no obvious layout overlap.
 
 ## HTML Shape
 
