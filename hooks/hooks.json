@@ -1,0 +1,16 @@
+{
+  "description": "Optional: archive long final answers as HTML artifacts. Tune with HTMLIFY_MIN_CHARS (default 2500) and HTMLIFY_EXPORT_ROOT.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-code-stop-htmlify.js\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
