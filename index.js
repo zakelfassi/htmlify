@@ -2,7 +2,13 @@ const createExtension = require('./src/extension');
 const { buildLocalHtmlDocument } = require('./src/document');
 const { formatInline, renderMarkdownish } = require('./src/markdown');
 const { getExportRoot, writeHtmlArtifact, writeRichHtmlArtifact } = require('./src/artifacts');
-const { validateRichHtmlDocument } = require('./src/validate');
+const {
+  validateRichHtmlDocument,
+  validateDeckDocument,
+  collectRichHtmlIssues,
+  collectDeckIssues,
+  detectProfile,
+} = require('./src/validate');
 const { addCommentableAttributes, buildAnnotationLayer, injectAnnotationLayer } = require('./src/annotation');
 const { validateCommentBundle, buildCommentsPrompt } = require('./src/comments');
 const { extractHtmlDocument } = require('./src/extension/messages');
@@ -24,6 +30,10 @@ module.exports = Object.assign(createExtension, {
     renderMarkdownish,
     resolveForcedExportMode,
     validateRichHtmlDocument,
+    validateDeckDocument,
+    collectRichHtmlIssues,
+    collectDeckIssues,
+    detectProfile,
     addCommentableAttributes,
     buildAnnotationLayer,
     buildCommentsPrompt,
