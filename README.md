@@ -1,210 +1,134 @@
-# htmlify
-
-Turn long agent answers into self-contained HTML artifacts people can scan, discuss, annotate, and ship.
-
-<p>
-  <img src="./assets/hero.svg" alt="Hero graphic showing a terminal chooser on the left and a designed HTML export preview on the right" width="100%" />
+<p align="center">
+  <img src="./assets/logomark.svg" alt="htmlify logomark" width="72" />
 </p>
 
-## What It Is
+<h1 align="center">htmlify</h1>
 
-htmlify is both:
+<p align="center"><strong>stdout, made permanent.</strong><br />
+Agent answers become self-contained HTML documents and presentation decks — one file you can open, print, annotate, and keep.</p>
 
-- a Pi / Oh My Pi extension for exporting long assistant replies as local HTML
-- an agentskills.io-compatible skill for asking coding agents to produce useful single-file HTML briefs, maps, reviews, reports, explainers, and lightweight editors
-
-It merges three ideas:
-
-- Long answers should stay visible in the terminal until the user explicitly exports them.
-- HTML beats markdown when the work is spatial, comparative, interactive, or meeting-facing.
-- Operator artifacts should be evidence-first, visual, self-contained, and production-safe.
-
-## Skill Install
-
-This repository root is a valid Agent Skill directory because it contains `SKILL.md`.
-
-```bash
-mkdir -p ~/.codex/skills
-git clone https://github.com/zakelfassi/htmlify.git ~/.codex/skills/htmlify
-```
-
-For other clients that support the agentskills.io format, install or copy this folder into that client's skills directory. The required skill entrypoint is:
-
-```text
-htmlify/SKILL.md
-```
-
-The skill uses progressive disclosure: `SKILL.md` is the activation surface, and `references/htmlify-principles.md` is loaded only when deeper artifact guidance is needed.
-
-## Coding Agent Integrations
-
-htmlify can be used two ways across coding agents:
-
-- Skill/manual mode: install the folder and invoke `htmlify` when a response should become a browser-ready artifact.
-- Hook/automatic mode: configure the agent to write an HTML artifact when a final answer is longer than a threshold.
-
-Codex local skill install:
-
-```bash
-mkdir -p ~/.codex/skills
-git clone https://github.com/zakelfassi/htmlify.git ~/.codex/skills/htmlify
-```
-
-Claude Code skill install:
-
-```bash
-mkdir -p ~/.claude/skills
-git clone https://github.com/zakelfassi/htmlify.git ~/.claude/skills/htmlify
-```
-
-Claude Code optional Stop hook:
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node /Users/zakelfassi/.claude/skills/htmlify/hooks/claude-code-stop-htmlify.js",
-            "timeout": 30
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-The Claude hook reads `last_assistant_message` from the Stop event and writes an HTML artifact when it is at least `HTMLIFY_MIN_CHARS` characters. Default threshold is `2500`.
-
-For Cursor, Windsurf, Aider, and other agents, point the agent at `SKILL.md` or use the bundled CLI:
-
-```bash
-printf '%s' "$LONG_ANSWER_TEXT" | npx @zakelfassi/htmlify htmlify-answer --title "Agent Answer"
-```
-
-See [references/agent-integrations.md](references/agent-integrations.md) for project-level rules, hook safety, and per-agent recipes.
-
-## Extension Install
-
-Native Pi npm install:
-
-```bash
-pi install npm:@zakelfassi/htmlify
-```
-
-Native Pi git install:
-
-```bash
-pi install git:https://github.com/zakelfassi/htmlify.git
-```
-
-Oh My Pi / OMP global install:
-
-```bash
-mkdir -p ~/.omp/agent/extensions
-git clone https://github.com/zakelfassi/htmlify.git ~/.omp/agent/extensions/htmlify
-```
-
-Then ask for a long answer and run:
-
-```text
-/htmlify-version
-/htmlify local
-```
-
-Legacy command aliases remain available: `/html-last`, `/html-last-version`, and `/html-comments`.
-
-## Render Modes
-
-<p>
-  <img src="./assets/render-modes.svg" alt="Three render mode cards for quick local, current Pi model, and Gemini CLI" width="100%" />
+<p align="center">
+  <a href="https://github.com/zakelfassi/htmlify/actions/workflows/ci.yml"><img src="https://github.com/zakelfassi/htmlify/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://www.npmjs.com/package/@zakelfassi/htmlify"><img src="https://img.shields.io/npm/v/%40zakelfassi%2Fhtmlify" alt="npm version" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0" /></a>
+  <a href="https://zakelfassi.github.io/htmlify/"><img src="https://img.shields.io/badge/gallery-live-E84B0F" alt="Live gallery" /></a>
 </p>
 
-| Mode | What it does | Best for |
-|---|---|---|
-| `local` | Fast local render with a designed shell, outline rail, excerpt hero, and clickable links | Speed and reliability |
-| `pi` | Uses the current Pi model for a richer second-pass HTML render | Staying in the current session/model context |
-| `gemini` | Uses Gemini CLI for a richer external render; falls back to local HTML if valid HTML is not returned | Maximum polish when Gemini is available |
+<p>
+  <img src="./assets/hero.svg" alt="A long terminal answer on the left becomes a designed, self-contained HTML document on the right" width="100%" />
+</p>
 
-## Commands
+Coding agents answer in walls of markdown. When the answer has *shape* — a comparison, an architecture, a timeline, a review — that wall flattens it. **htmlify** is a skill family that makes agents ship designed, self-contained HTML instead: operator briefs, PR review packets, incident timelines, decision briefs, explainers, interactive boards, and full presentation decks with speaker notes. Zero dependencies, zero build step, one auditable file.
+
+**See it live: [the gallery](https://zakelfassi.github.io/htmlify/)** — every artifact there was generated by these skills, about this repository.
+
+## What's in the box
+
+| Piece | What it is |
+| --- | --- |
+| [`skills/htmlify`](skills/htmlify/SKILL.md) | Document skill — 10 modes: operator-brief, build-plan, implementation-map, pr-review-packet, release-brief, incident-report, decision-brief, status-report, explainer, prototype/editor |
+| [`skills/deckify`](skills/deckify/SKILL.md) | Deck skill — 6 modes: talk-deck, workshop-deck, essay-deck, demo-deck, launch-deck, teaching-guide; speaker notes, run-of-show, downloadable guide/PDF |
+| `htmlify-answer` CLI | Pipe any text into a designed artifact; **validate** any artifact against the rich/app/deck safety profiles |
+| Pi / OMP extension | `/htmlify` commands, render modes, browser annotation layer |
+| Claude Code plugin | One-command install of both skills, optional long-answer Stop hook |
+| [Hardcopy](skills/htmlify/references/hardcopy.md) | The design system every artifact ships in — engineering-plate language: warm paper, ink hairlines, serif display, mono metadata, one signal-orange accent |
+
+<p>
+  <img src="./assets/skill-family.svg" alt="htmlify and deckify skills sharing one validated core" width="100%" />
+</p>
+
+## Install
+
+| Agent | Install |
+| --- | --- |
+| **Claude Code** | `/plugin marketplace add zakelfassi/htmlify` then `/plugin install htmlify@htmlify` |
+| **Codex** | `git clone https://github.com/zakelfassi/htmlify.git ~/.htmlify && ln -sfn ~/.htmlify/skills/htmlify ~/.codex/skills/htmlify && ln -sfn ~/.htmlify/skills/deckify ~/.codex/skills/deckify` |
+| **Cursor / Windsurf** | Clone the repo, point a project rule at `skills/htmlify/SKILL.md` / `skills/deckify/SKILL.md` |
+| **Aider / anything** | `printf '%s' "$ANSWER" \| npx -y @zakelfassi/htmlify htmlify-answer --title "Review"` |
+| **Pi / Oh-My-Pi** | `pi install npm:@zakelfassi/htmlify` |
+
+Per-agent recipes, project rules, and hook setup: [agent-integrations.md](skills/htmlify/references/agent-integrations.md).
+
+## How it works
+
+<p>
+  <img src="./assets/how-it-works.svg" alt="Three steps: gather evidence, author one HTML file, validate and open" width="100%" />
+</p>
+
+1. **Evidence first.** The skill reads the repo, git state, PRs, CI, and logs before designing anything; unverifiable claims are stamped `needs verification`.
+2. **One HTML file.** Inline CSS+JS in the Hardcopy design language. No CDNs, no fonts, no analytics, no build.
+3. **Prove it.** The bundled validator gates the output — then it opens in your browser.
+
+```bash
+npx -y @zakelfassi/htmlify htmlify-answer --validate artifact.html --profile auto
+```
+
+| Profile | Rules |
+| --- | --- |
+| `rich` | No scripts at all — for model-generated documents |
+| `app` | Inline scripts allowed (editors, boards); external scripts, `on*=` handlers, `javascript:` URLs still banned |
+| `deck` | `app` plus the deck contract: ≥2 slides, keyboard nav, speaker notes on substantive slides, print CSS |
+| `auto` | Detected per file from the document shape |
+
+Exit codes: `0` valid · `1` validation errors · `2` usage/IO. Add `--format json` for agent consumption.
+
+## Artifact modes
+
+| Mode | Use when | Live example |
+| --- | --- | --- |
+| `operator-brief` | What happened, what's next, risks, attention | [operator-brief](https://zakelfassi.github.io/htmlify/examples/htmlify/operator-brief.html) |
+| `pr-review-packet` | Motivation, diff tour, reviewer checklist | [PR #1 packet](https://zakelfassi.github.io/htmlify/examples/htmlify/pr-review-packet.html) |
+| `incident-report` | Impact, timeline, root cause, follow-ups | [capture bug](https://zakelfassi.github.io/htmlify/examples/htmlify/incident-timeline.html) |
+| `decision-brief` | Options, tradeoffs, the call | [monorepo decision](https://zakelfassi.github.io/htmlify/examples/htmlify/decision-brief.html) |
+| `implementation-map` | Modules, data flow, hot path | [runtime map](https://zakelfassi.github.io/htmlify/examples/htmlify/implementation-map.html) |
+| `explainer` | Concepts, comparisons, glossary, FAQ | [HTML vs markdown](https://zakelfassi.github.io/htmlify/examples/htmlify/explainer.html) |
+| `prototype` / `editor` | Interactive triage, tuning, ordering — with export | [launch board](https://zakelfassi.github.io/htmlify/examples/htmlify/launch-board.html) |
+| `talk-deck` (deckify) | Talks with speaker notes + run-of-show | [launch talk](https://zakelfassi.github.io/htmlify/examples/deckify/talk-deck.html) |
+| `workshop-deck` (deckify) | Teaching with exercises + printable guide | [skill workshop](https://zakelfassi.github.io/htmlify/examples/deckify/workshop-deck.html) |
+
+Plus `build-plan`, `release-brief`, `status-report`, and deckify's `essay-deck`, `demo-deck`, `launch-deck`, `teaching-guide`.
+
+## The Pi / OMP runtime (optional)
+
+The npm package doubles as a Pi / Oh-My-Pi extension that captures long answers and exports them on demand:
 
 | Command | Result |
-|---|---|
-| `/htmlify` | Opens quick local HTML without starting a Pi model turn |
-| `/htmlify choose` | Opens a render-mode chooser |
-| `/htmlify local` | Forces quick local HTML |
-| `/htmlify pi` | Forces designed HTML via the current Pi model |
-| `/htmlify gemini` | Forces designed HTML via Gemini CLI |
-| `/htmlify-version` | Shows the loaded extension version |
-| `/htmlify-comments <comments.json>` | Imports downloaded HTML review comments and sends them back to the current agent |
+| --- | --- |
+| `/htmlify` | Quick local HTML of the last long answer (Hardcopy-styled, outline rail, annotation layer) |
+| `/htmlify choose` | Render-mode chooser — `local`, `pi` (current model second pass), `gemini` (Gemini CLI, falls back to local) |
+| `/htmlify-comments <json>` | Import browser review comments back to the agent as a structured prompt |
+| `/htmlify-version` | Show loaded version |
 
-## Runtime Behavior
+Legacy aliases (`/html-last`, `/html-comments`, `/html-last-version`) keep working. Exports include a trusted annotation layer: select text in the browser, comment, copy Markdown for the agent, or download a JSON bundle. Long answers stay visible in the terminal — export is always explicit.
 
-<p>
-  <img src="./assets/flow.svg" alt="Flow diagram showing the extension behavior: long answer finishes normally, user runs htmlify, browser opens the export" width="100%" />
-</p>
+For agents with hooks, the bundled Claude Code Stop hook archives answers past a threshold (`HTMLIFY_MIN_CHARS`, default 2500) to `HTMLIFY_EXPORT_ROOT` — opt-in, see [agent-integrations.md](skills/htmlify/references/agent-integrations.md).
 
-- Long answers are detected from message length, line count, or paragraph count.
-- Long answers are captured into session state so export commands can work after the answer finishes.
-- Local and designed exports open automatically in the browser after the file is written.
-- Exports include a trusted local annotation layer: highlight text, add comments, copy Markdown for the agent, or download a comments JSON bundle.
-- Rich Pi/Gemini renders must be standalone HTML documents with inline CSS only.
-- Rich HTML is validated before writing: scripts, event-handler attributes, `javascript:` URLs, external assets, external CSS URLs, unsafe tags, oversized output, and overly complex output are rejected or routed to fallback behavior.
+## Migrating from 0.x
 
-## Repo Layout
+1.0 restructures the repo into a skill family. **Breaking:** the root `SKILL.md` and `references/` moved to `skills/htmlify/`; clones installed as a skill directory at the repo root must re-install:
 
-```text
-htmlify/
-├── .github/workflows/ci.yml
-├── assets/
-├── bin/
-│   └── htmlify-answer.js
-├── hooks/
-│   └── claude-code-stop-htmlify.js
-├── references/
-│   ├── agent-integrations.md
-│   └── htmlify-principles.md
-├── test/
-│   └── extension.test.js
-├── index.js
-├── package.json
-├── pnpm-lock.yaml
-├── README.md
-└── SKILL.md
+```bash
+ln -sfn /path/to/htmlify/skills/htmlify ~/.codex/skills/htmlify   # and skills/deckify
 ```
+
+Unchanged: the `htmlify-answer` CLI flags and stdin behavior (`--validate` is additive), the hook path `hooks/claude-code-stop-htmlify.js` (existing `settings.json` entries keep working), the Pi/OMP entry points, all `/htmlify` commands, and the env vars (including the legacy `PI_HTML_LONG_ANSWER_*` aliases).
 
 ## Development
 
-Use PNPM:
-
 ```bash
-pnpm install
-pnpm test
+corepack enable && pnpm install
+pnpm test        # node --test, 35 tests
+pnpm lint        # biome
+pnpm typecheck   # strict tsc over JSDoc types
+node bin/htmlify-answer.js --validate examples/htmlify/*.html examples/deckify/*.html --profile auto
 ```
 
-If you modify the runtime, re-test these flows:
+The runtime is dependency-free CommonJS under `src/` with strict JSDoc type checking — what ships is what you read. Releases are cut by [release-please](https://github.com/googleapis/release-please) from conventional commits, published to npm with provenance. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- long answer -> answer remains visible; no automatic replacement notice appears
-- `/htmlify` -> local HTML writes and opens without starting a Pi model turn
-- `/htmlify choose` -> chooser appears when supported
-- `/htmlify pi` -> second-pass render path queues/runs and validates rich HTML
-- `/htmlify gemini` -> Gemini render path succeeds or cleanly falls back
-- `/htmlify-comments <comments.json>` -> browser comments validate and queue a structured review prompt
-- `/htmlify-version` -> version shown in-session
+## Trust and security
 
-## Publishing
+Extensions and hooks run with your user permissions — install from sources you trust and pin a ref when you need reproducibility. Model-generated HTML is treated as untrusted until validated: scripts (in the `rich` profile), event-handler attributes, `javascript:` URLs, external assets/CSS, meta refresh, and oversized output are rejected, with fallback to the local renderer. Interactive profiles still ban every external-execution vector. Found a way around the validator? That's a security report we want: [SECURITY.md](SECURITY.md).
 
-The unscoped npm name `htmlify` is already taken. Publish this package under the scoped name:
+## License
 
-```bash
-NPM_CONFIG_CACHE=/private/tmp/htmlify-npm-cache npm publish --access public
-```
-
-## Trust And Security
-
-Extensions run with your user permissions. Only install from sources you trust, review the source before installing, and pin a git ref or tag when you need reproducible behavior.
-
-Rich HTML generated by Pi or Gemini is treated as untrusted until it passes validation. The validator is intentionally conservative: if rich output includes active scripts, event handlers, external assets, or unsafe URLs, htmlify falls back to local HTML rather than writing the rich document.
+[Apache-2.0](LICENSE) © Zak El Fassi
