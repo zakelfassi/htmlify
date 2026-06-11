@@ -24,18 +24,22 @@ function buildAnnotationLayer(meta) {
   const title = String(meta && meta.title ? meta.title : 'HTML Export');
   return `${TRUSTED_ANNOTATION_MARKER}
 <style>
-  .hla-comment-bar { position: fixed; right: 18px; bottom: 18px; z-index: 99999; display: flex; gap: 8px; flex-wrap: wrap; max-width: min(420px, calc(100vw - 36px)); font: 13px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  .hla-comment-bar button, .hla-comment-panel button { border: 1px solid #b9c4d6; background: #fbfdff; color: #162033; border-radius: 999px; padding: 8px 11px; cursor: pointer; box-shadow: 0 8px 22px -18px rgba(15,23,42,.55); }
-  .hla-comment-bar button:hover, .hla-comment-panel button:hover { background: #f4f7fb; }
-  .hla-comment-panel { position: fixed; top: 16px; right: 16px; bottom: 72px; z-index: 99998; width: min(390px, calc(100vw - 32px)); overflow: auto; background: #fbfdff; color: #162033; border: 1px solid #cfd7e6; border-radius: 18px; box-shadow: 0 24px 70px -34px rgba(15,23,42,.55); padding: 16px; font: 13px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  :root { --hla-paper: #faf7f0; --hla-ink: #1c1a15; --hla-ink-2: #6e6759; --hla-rule: #d9d2c3; --hla-signal: #e84b0f; --hla-wash: #fbeae1; }
+  @media (prefers-color-scheme: dark) {
+    :root { --hla-paper: #1e1b16; --hla-ink: #ede8dc; --hla-ink-2: #a39a88; --hla-rule: #3a352b; --hla-signal: #ff6b2c; --hla-wash: #3a2114; }
+  }
+  .hla-comment-bar { position: fixed; right: 18px; bottom: 18px; z-index: 99999; display: flex; gap: 8px; flex-wrap: wrap; max-width: min(420px, calc(100vw - 36px)); font: 11px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .hla-comment-bar button, .hla-comment-panel button { font: inherit; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; border: 1.5px solid var(--hla-ink); background: var(--hla-paper); color: var(--hla-ink); border-radius: 2px; padding: 6px 10px; cursor: pointer; }
+  .hla-comment-bar button:hover, .hla-comment-panel button:hover { border-color: var(--hla-signal); color: var(--hla-signal); }
+  .hla-comment-panel { position: fixed; top: 16px; right: 16px; bottom: 72px; z-index: 99998; width: min(390px, calc(100vw - 32px)); overflow: auto; background: var(--hla-paper); color: var(--hla-ink); border: 2px solid var(--hla-ink); border-radius: 2px; padding: 16px; font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
   .hla-comment-panel[hidden] { display: none; }
-  .hla-comment-panel h2 { margin: 0 0 10px; font-size: 16px; line-height: 1.2; }
-  .hla-comment-panel textarea { width: 100%; min-height: 90px; resize: vertical; border: 1px solid #cfd7e6; border-radius: 12px; padding: 10px; font: inherit; color: inherit; background: #fbfdff; }
+  .hla-comment-panel h2 { margin: 0 0 10px; font-family: Charter, "Bitstream Charter", Cambria, Georgia, serif; font-weight: 400; font-size: 19px; line-height: 1.2; }
+  .hla-comment-panel textarea { width: 100%; min-height: 90px; resize: vertical; border: 1px solid var(--hla-rule); border-radius: 2px; padding: 10px; font: inherit; color: inherit; background: var(--hla-paper); }
   .hla-comment-list { display: grid; gap: 10px; margin-top: 12px; }
-  .hla-comment-card { border: 1px solid #dce3ef; border-radius: 14px; padding: 10px; background: #f8fafc; }
-  .hla-comment-card blockquote { margin: 0 0 8px; padding: 8px 10px; border: 1px solid #c8d7d4; border-radius: 10px; color: #40506a; background: #eef7f5; }
-  .hla-highlight { background: #fff0a8; border-radius: 3px; }
-  .hla-comment-target { outline: 2px solid #1c7c72; outline-offset: 3px; }
+  .hla-comment-card { border: 1px solid var(--hla-rule); border-radius: 2px; padding: 10px; background: var(--hla-paper); }
+  .hla-comment-card blockquote { margin: 0 0 8px; padding: 8px 10px; border-left: 3px solid var(--hla-signal); color: var(--hla-ink-2); background: var(--hla-wash); }
+  .hla-highlight { background: var(--hla-wash); border-radius: 2px; }
+  .hla-comment-target { outline: 2px solid var(--hla-signal); outline-offset: 3px; }
 </style>
 <section class="hla-comment-panel" id="hla-comment-panel" hidden aria-label="HTML export comments">
   <h2>HTML comments</h2>
