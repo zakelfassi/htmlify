@@ -42,4 +42,6 @@ jobs:
           # whose placeholder NODE_AUTH_TOKEN preempts OIDC trusted publishing.
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+        # Node 22 bundles npm 10, which predates OIDC trusted publishing (needs npm >= 11.5.1).
+      - run: npm install -g npm@latest
       - run: pnpm publish --access public --no-git-checks --provenance
