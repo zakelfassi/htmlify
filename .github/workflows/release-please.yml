@@ -26,7 +26,7 @@ jobs:
     needs: release-please
     # Publishes via npm trusted publishing (OIDC) — no token secret involved.
     # workflow_dispatch allows re-publishing the current tagged version manually.
-    if: needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       contents: read
