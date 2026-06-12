@@ -38,7 +38,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          registry-url: https://registry.npmjs.org
+          # No registry-url here: setup-node would write a token-based .npmrc
+          # whose placeholder NODE_AUTH_TOKEN preempts OIDC trusted publishing.
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm publish --access public --no-git-checks --provenance
