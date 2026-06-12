@@ -4,7 +4,7 @@ description: Create self-contained HTML artifacts from agent or repo context, in
 compatibility: Works in agentskills.io-compatible clients. Optional Pi/OMP extension runtime is in index.js and requires Node 20+.
 license: Apache-2.0
 metadata:
-  version: "0.3.1" # x-release-please-version
+  version: "1.0.0" # x-release-please-version
   source: "https://github.com/zakelfassi/htmlify"
 ---
 

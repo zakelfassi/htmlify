@@ -4,7 +4,7 @@ description: Create self-contained HTML presentation decks and companion downloa
 compatibility: Works in agentskills.io-compatible clients. Part of the htmlify skill family; specialized for media-rich deck/guide production.
 license: Apache-2.0
 metadata:
-  version: "0.3.1" # x-release-please-version
+  version: "1.0.0" # x-release-please-version
   source: "https://github.com/zakelfassi/htmlify"
 ---
 
