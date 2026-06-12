@@ -1,6 +1,6 @@
 {
   "name": "@zakelfassi/htmlify",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "private": false,
   "description": "Turn agent answers into self-contained HTML artifacts and presentation decks — operator briefs, review packets, incident timelines, decision briefs, and talks. Zero dependencies, zero build, one file.",
   "license": "Apache-2.0",
